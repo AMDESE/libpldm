@@ -70,6 +70,7 @@ Change categories:
 - Support for building the documentation with doxygen
 - base: Add encode req & decode resp for MultipartReceive
 - pdr: Add pldm_file_descriptor_pdr struct
+- rde: Add NegotiateMediumParameters support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

@@ -89,6 +89,7 @@ Change categories:
 - base: Add encode req & decode resp for MultipartReceive
 - pdr: Add pldm_file_descriptor_pdr struct
 - rde: Add NegotiateRedfishParameters support
+- rde: Add NegotiateMediumParameters support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

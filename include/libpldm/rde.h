@@ -13,9 +13,13 @@ extern "C" {
 /* Response lengths are inclusive of completion code */
 #define PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES	    3
 #define PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_RESP_MIN_SIZE 12
+#define PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES	    4
+#define PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_RESP_BYTES	    5
+#define PLDM_RDE_MIN_TRANSFER_SIZE_BYTES		    64
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
+	PLDM_NEGOTIATE_MEDIUM_PARAMETERS = 0x02,
 };
 
 enum pldm_rde_varstring_format {
@@ -154,6 +158,59 @@ int decode_negotiate_redfish_parameters_resp(
 	bitfield16_t *device_feature_support,
 	uint32_t *device_configuration_signature,
 	struct pldm_rde_varstring *provider_name);
+
+/**
+ * @brief Encode NegotiateMediumParameters request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] mc_max_transfer_size - Maximum amount of data the MC can
+ * support for a single message transfer.
+ * @param[out] msg - Request message.
+ * @return pldm_completion_codes.
+ */
+int encode_negotiate_medium_parameters_req(uint8_t instance_id,
+					   uint32_t mc_max_transfer_size,
+					   struct pldm_msg *msg);
+
+/**
+ * @brief Decode NegotiateMediumParameters request.
+ *
+ * @param[in] msg - Request message.
+ * @param[out] mc_max_transfer_size - Pointer to a uint32_t variable.
+ * @return pldm_completion_codes.
+ */
+int decode_negotiate_medium_parameters_req(const struct pldm_msg *msg,
+					   uint32_t *mc_max_transfer_size);
+
+/**
+ * @brief Decode Negotiate Medium Parameters response
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] device_max_transfer_size - The maximum number of bytes that
+ * the RDE Device can support in a chunk for a single message transfer
+ * @param[in] payload_length - Length of the encoded payload segment.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_negotiate_medium_parameters_resp(uint8_t instance_id,
+					    uint8_t completion_code,
+					    uint32_t device_max_transfer_size,
+					    size_t payload_length,
+					    struct pldm_msg *msg);
+
+/**
+ * @brief Decode Negotiate Medium Parameters response
+ *
+ * @param[in] msg: PLDM Msg byte array received from the responder
+ * @param[in] payload_length: Length of the payload
+ * @param[out] completion_code: Completion code as set by the responder
+ * @param[out] device_max_transfer_size: Pointer to a uint32_t variable
+ */
+int decode_negotiate_medium_parameters_resp(const struct pldm_msg *msg,
+					    size_t payload_length,
+					    uint8_t *completion_code,
+					    uint32_t *device_max_transfer_size);
 
 #ifdef __cplusplus
 }

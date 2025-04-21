@@ -109,3 +109,56 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(strncmp(device, decodedProviderName.string_data, strlen(device)),
               0);
 }
+
+TEST(NegotiateMediumParametersTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t mcMaximumTransferSize = 0xDEADBEEF;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_negotiate_medium_parameters_req(
+                  FIXED_INSTANCE_ID, mcMaximumTransferSize, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_NEGOTIATE_MEDIUM_PARAMETERS, PLDM_REQUEST);
+
+    uint32_t decodedMcMaximumTransferSize;
+
+    EXPECT_EQ(decode_negotiate_medium_parameters_req(
+                  request, &decodedMcMaximumTransferSize),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedMcMaximumTransferSize, mcMaximumTransferSize);
+}
+
+TEST(NegotiateMediumParametersTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint32_t deviceMaximumTransferSize = 0xDEADBEEF;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_RESP_BYTES>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_negotiate_medium_parameters_resp(
+                  FIXED_INSTANCE_ID, completionCode, deviceMaximumTransferSize,
+                  PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_RESP_BYTES, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_NEGOTIATE_MEDIUM_PARAMETERS, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+    uint32_t decodedDeviceMaximumTransferSize;
+
+    EXPECT_EQ(decode_negotiate_medium_parameters_resp(
+                  response, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_RESP_BYTES,
+                  &decodedCompletionCode, &decodedDeviceMaximumTransferSize),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedDeviceMaximumTransferSize, deviceMaximumTransferSize);
+}

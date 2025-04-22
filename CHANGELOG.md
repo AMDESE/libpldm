@@ -90,6 +90,7 @@ Change categories:
 - pdr: Add pldm_file_descriptor_pdr struct
 - rde: Add NegotiateRedfishParameters support
 - rde: Add NegotiateMediumParameters support
+- rde: Add GetSchemaDictionary support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

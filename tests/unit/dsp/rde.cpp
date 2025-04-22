@@ -162,3 +162,66 @@ TEST(NegotiateMediumParametersTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(decodedCompletionCode, completionCode);
     EXPECT_EQ(decodedDeviceMaximumTransferSize, deviceMaximumTransferSize);
 }
+
+TEST(GetSchemaDictionaryTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t resorceID = 0xDEADBEEF;
+    uint8_t requestedSchemaClass = PLDM_RDE_SCHEMA_MAJOR;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_RDE_SCHEMA_DICTIONARY_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_get_schema_dictionary_req(
+                  FIXED_INSTANCE_ID, resorceID, requestedSchemaClass,
+                  PLDM_RDE_SCHEMA_DICTIONARY_REQ_BYTES, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_SCHEMA_DICTIONARY, PLDM_REQUEST);
+
+    uint32_t decodeResorceID;
+    uint8_t decodeRequestedSchemaClass;
+
+    EXPECT_EQ(decode_get_schema_dictionary_req(
+                  request, PLDM_RDE_SCHEMA_DICTIONARY_REQ_BYTES,
+                  &decodeResorceID, &decodeRequestedSchemaClass),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodeResorceID, resorceID);
+    EXPECT_EQ(requestedSchemaClass, requestedSchemaClass);
+}
+
+TEST(GetSchemaDictionaryTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint8_t dictionaryFormat = PLDM_RDE_SCHEMA_MAJOR;
+    uint32_t transferHandle = 0xDEADBEEF;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_RDE_SCHEMA_DICTIONARY_RESP_BYTES>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_get_schema_dictionary_resp(
+                  FIXED_INSTANCE_ID, completionCode, dictionaryFormat,
+                  transferHandle, PLDM_RDE_SCHEMA_DICTIONARY_RESP_BYTES,
+                  response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_GET_SCHEMA_DICTIONARY, PLDM_RESPONSE);
+
+    uint8_t decodeCompletionCode;
+    uint8_t decodeDictionaryFormat;
+    uint32_t decodeTransferHandle;
+
+    EXPECT_EQ(decode_get_schema_dictionary_resp(
+                  response, PLDM_RDE_SCHEMA_DICTIONARY_RESP_BYTES,
+                  &decodeCompletionCode, &decodeDictionaryFormat,
+                  &decodeTransferHandle),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodeCompletionCode, completionCode);
+    EXPECT_EQ(decodeDictionaryFormat, dictionaryFormat);
+    EXPECT_EQ(decodeTransferHandle, transferHandle);
+}

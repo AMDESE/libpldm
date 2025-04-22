@@ -16,10 +16,13 @@ extern "C" {
 #define PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES	    4
 #define PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_RESP_BYTES	    5
 #define PLDM_RDE_MIN_TRANSFER_SIZE_BYTES		    64
+#define PLDM_RDE_SCHEMA_DICTIONARY_REQ_BYTES		    5
+#define PLDM_RDE_SCHEMA_DICTIONARY_RESP_BYTES		    6
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
 	PLDM_NEGOTIATE_MEDIUM_PARAMETERS = 0x02,
+	PLDM_GET_SCHEMA_DICTIONARY = 0x03,
 };
 
 enum pldm_rde_varstring_format {
@@ -83,6 +86,16 @@ struct pldm_rde_varstring {
 	uint8_t string_format;	     // Format of the string
 	uint8_t string_length_bytes; // Length of the string including NULL terminator
 	char *string_data; // Pointer to the string data, should be NULL terminated
+};
+
+/* @brief schemaClass PLDM data type(enum8) Ref section: 5.3.2 */
+enum pldm_rde_schema_type {
+	PLDM_RDE_SCHEMA_MAJOR = 0,
+	PLDM_RDE_SCHEMA_EVENT = 1,
+	PLDM_RDE_SCHEMA_ANNOTATION = 2,
+	PLDM_RDE_SCHEMA_COLLECTION_MEMBER_TYPE = 3,
+	PLDM_RDE_SCHEMA_ERROR = 4,
+	PLDM_RDE_SCHEMA_REGISTRY = 5,
 };
 
 /**
@@ -211,6 +224,70 @@ int decode_negotiate_medium_parameters_resp(const struct pldm_msg *msg,
 					    size_t payload_length,
 					    uint8_t *completion_code,
 					    uint32_t *device_max_transfer_size);
+
+/**
+ * @brief Encode GetSchemaDictionary request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] resource_id - The ResourceID of any resource in the Redfish
+ * Resource PDR.A ResourceID of 0xFFFF FFFF may be supplied to retrieve
+ * dictionaries common to all RDE Device resources (such as the event or
+ * annotation dictionary) without referring to an individual resource
+ * @param[in] schema_class - The class of schema being requested.
+ * @param[in] payload_length - Length of request message payload.
+ * @param[out] msg - Request message.
+ * @return pldm_completion_codes.
+ */
+int encode_get_schema_dictionary_req(uint8_t instance_id, uint32_t resource_id,
+				     uint8_t schema_class,
+				     size_t payload_length,
+				     struct pldm_msg *msg);
+
+/**
+ * @brief Decode GetSchemaDictionary request.
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_length - Length of request message payload.
+ * @param[out] resource_id - Pointer to a uint32_t variable.
+ * @param[out] requested_schema_class - Pointer to a uint8_t variable.
+ * @return pldm_completion_codes.
+ */
+int decode_get_schema_dictionary_req(const struct pldm_msg *msg,
+				     size_t payload_length,
+				     uint32_t *resource_id,
+				     uint8_t *requested_schema_class);
+
+/**
+ * @brief Encode GetSchemaDictionary response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] dictionary_format - The format of the dictionary.
+ * @param[in] transfer_handle - A data transfer handle that the MC shall
+ * use.
+ * @param[in] payload_length - Length of request message payload.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_get_schema_dictionary_resp(
+	uint8_t instance_id, uint8_t completion_code, uint8_t dictionary_format,
+	uint32_t transfer_handle, size_t payload_length, struct pldm_msg *msg);
+/**
+ * @brief Decode GetSchemaDictionary Response
+ *
+ * @param[in] msg - Response Message
+ * @param[in] payload_length - Length of the payload
+ * @param[out] completion_code - Completion Code
+ * @param[out] dictionary_format - Dictionary Format for the particular
+ * resource id
+ * @param[out] transfer_handle - Transfer Handle to be used to get
+ * dictionary
+ */
+int decode_get_schema_dictionary_resp(const struct pldm_msg *msg,
+				      size_t payload_length,
+				      uint8_t *completion_code,
+				      uint8_t *dictionary_format,
+				      uint32_t *transfer_handle);
 
 #ifdef __cplusplus
 }

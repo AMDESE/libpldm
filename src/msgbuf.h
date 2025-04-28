@@ -576,6 +576,72 @@ pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx, void *dst)
 	return pldm__msgbuf_invalidate(ctx);
 }
 
+#define pldm_msgbuf_extract_uint64(ctx, dst)                                   \
+        pldm_msgbuf_extract_typecheck(uint64_t, pldm__msgbuf_extract_uint64,   \
+                                      dst, ctx, (void *)&(dst))
+LIBPLDM_CC_NONNULL
+LIBPLDM_CC_ALWAYS_INLINE int
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+pldm__msgbuf_extract_uint64(struct pldm_msgbuf *ctx, void *dst)
+{
+	uint64_t ldst;
+
+	static_assert(
+		// NOLINTNEXTLINE(bugprone-sizeof-expression)
+		sizeof(ldst) < INTMAX_MAX,
+		"The following addition may not uphold the runtime assertion");
+
+	if (ctx->remaining >= (intmax_t)sizeof(ldst)) {
+		assert(ctx->cursor);
+		memcpy(&ldst, ctx->cursor, sizeof(ldst));
+		ldst = le64toh(ldst);
+		memcpy(dst, &ldst, sizeof(ldst));
+		ctx->cursor += sizeof(ldst);
+		ctx->remaining -= sizeof(ldst);
+		return 0;
+	}
+
+	if (ctx->remaining > INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		ctx->remaining -= sizeof(ldst);
+		return -EOVERFLOW;
+	}
+
+	return pldm__msgbuf_invalidate(ctx);
+}
+
+#define pldm_msgbuf_extract_int64(ctx, dst)                                    \
+        pldm_msgbuf_extract_typecheck(int64_t, pldm__msgbuf_extract_int64,     \
+                                      dst, ctx, (void *)&(dst))
+LIBPLDM_CC_NONNULL
+LIBPLDM_CC_ALWAYS_INLINE int
+// NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+pldm__msgbuf_extract_int64(struct pldm_msgbuf *ctx, void *dst)
+{
+	int64_t ldst;
+
+	static_assert(
+		// NOLINTNEXTLINE(bugprone-sizeof-expression)
+		sizeof(ldst) < INTMAX_MAX,
+		"The following addition may not uphold the runtime assertion");
+
+	if (ctx->remaining >= (intmax_t)sizeof(ldst)) {
+		assert(ctx->cursor);
+		memcpy(&ldst, ctx->cursor, sizeof(ldst));
+		ldst = le64toh(ldst);
+		memcpy(dst, &ldst, sizeof(ldst));
+		ctx->cursor += sizeof(ldst);
+		ctx->remaining -= sizeof(ldst);
+		return 0;
+	}
+
+	if (ctx->remaining > INTMAX_MIN + (intmax_t)sizeof(ldst)) {
+		ctx->remaining -= sizeof(ldst);
+		return -EOVERFLOW;
+	}
+
+	return pldm__msgbuf_invalidate(ctx);
+}
+
 /**
  * Extract the field at the msgbuf cursor into the lvalue named by dst.
  *
@@ -593,7 +659,9 @@ pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx, void *dst)
 		int16_t: pldm__msgbuf_extract_int16,                           \
 		uint32_t: pldm__msgbuf_extract_uint32,                         \
 		int32_t: pldm__msgbuf_extract_int32,                           \
-		real32_t: pldm__msgbuf_extract_real32)(ctx, (void *)&(dst))
+		real32_t: pldm__msgbuf_extract_real32,                         \
+		uint64_t: pldm__msgbuf_extract_uint64,                         \
+		int64_t: pldm__msgbuf_extract_int64)(ctx, (void *)&(dst))
 
 /**
  * Extract the field at the msgbuf cursor into the object pointed-to by dst.
@@ -612,7 +680,9 @@ pldm__msgbuf_extract_real32(struct pldm_msgbuf *ctx, void *dst)
 		int16_t *: pldm__msgbuf_extract_int16,                         \
 		uint32_t *: pldm__msgbuf_extract_uint32,                       \
 		int32_t *: pldm__msgbuf_extract_int32,                         \
-		real32_t *: pldm__msgbuf_extract_real32)(ctx, dst)
+		real32_t *: pldm__msgbuf_extract_real32,                       \
+		uint64_t *: pldm__msgbuf_extract_uint64,                       \
+		int64_t *: pldm__msgbuf_extract_int64)(ctx, dst)
 
 /**
  * @ref pldm_msgbuf_extract_array
@@ -1500,6 +1570,23 @@ static inline int pldm_msgbuf_typecheck_real32_t(struct pldm_msgbuf *ctx,
 	static_assert(std::is_same<real32_t, T>::value);
 	return pldm__msgbuf_extract_real32(ctx, buf);
 }
+
+template <typename T>
+static inline int pldm_msgbuf_typecheck_uint64_t(struct pldm_msgbuf *ctx,
+						 void *buf)
+{
+	static_assert(std::is_same<uint64_t, T>::value);
+	return pldm__msgbuf_extract_uint64(ctx, buf);
+}
+
+template <typename T>
+static inline int pldm_msgbuf_typecheck_int64_t(struct pldm_msgbuf *ctx,
+						void *buf)
+{
+	static_assert(std::is_same<int64_t, T>::value);
+	return pldm__msgbuf_extract_int64(ctx, buf);
+}
+
 #endif
 
 #endif /* BUF_H */

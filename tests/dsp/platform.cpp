@@ -3150,7 +3150,7 @@ TEST(GetNumericEffecterValue, testBadEncodeResponse)
 
     rc = encode_get_numeric_effecter_value_resp(
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-        0, PLDM_SUCCESS, 6, 9, reinterpret_cast<uint8_t*>(&pendingValue),
+        0, PLDM_SUCCESS, 8, 9, reinterpret_cast<uint8_t*>(&pendingValue),
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         reinterpret_cast<uint8_t*>(&presentValue), response,
         responseMsg.size() - hdrSize);
@@ -3267,6 +3267,158 @@ TEST(GetNumericEffecterValue, testBadDecodeResponse)
         &reteffecter_dataSize, &reteffecter_operState, retpendingValue,
         retpresentValue);
 
+    EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
+}
+
+TEST(GetNumericEffecterValue, testGoodEncodeResponse64)
+{
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    uint64_t pendingValue = 0x12345678abcdef11;
+    uint64_t presentValue = 0xabcdef1112345678;
+    uint64_t val_pending;
+    uint64_t val_present;
+
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 14>
+        responseMsg{};
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+
+    auto rc = encode_get_numeric_effecter_value_resp(
+        0, completionCode, effecter_dataSize, effecter_operState,
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<uint8_t*>(&pendingValue),
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<uint8_t*>(&presentValue), response,
+        responseMsg.size() - hdrSize);
+
+    struct pldm_get_numeric_effecter_value_resp* resp =
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<struct pldm_get_numeric_effecter_value_resp*>(
+            response->payload);
+
+    memcpy(&val_pending, &resp->pending_and_present_values[0],
+           sizeof(val_pending));
+    val_pending = le64toh(val_pending);
+    memcpy(&val_present, &resp->pending_and_present_values[8],
+           sizeof(val_present));
+    val_present = le64toh(val_present);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    EXPECT_EQ(effecter_dataSize, resp->effecter_data_size);
+    EXPECT_EQ(effecter_operState, resp->effecter_oper_state);
+    EXPECT_EQ(pendingValue, val_pending);
+    EXPECT_EQ(presentValue, val_present);
+}
+
+TEST(GetNumericEffecterValue, testGoodDecodeResponse64)
+{
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 14>
+        responseMsg{};
+
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_UINT64;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    uint64_t pendingValue = 0x8765432111fedcba;
+    uint64_t presentValue = 0x11fedcba87654321;
+
+    uint8_t retcompletionCode;
+    uint8_t reteffecter_dataSize;
+    uint8_t reteffecter_operState;
+    uint8_t retpendingValue[8];
+    uint8_t retpresentValue[8];
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+    struct pldm_get_numeric_effecter_value_resp* resp =
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<struct pldm_get_numeric_effecter_value_resp*>(
+            response->payload);
+
+    resp->completion_code = completionCode;
+    resp->effecter_data_size = effecter_dataSize;
+    resp->effecter_oper_state = effecter_operState;
+
+    uint64_t pendingValue_le = htole64(pendingValue);
+    memcpy(resp->pending_and_present_values, &pendingValue_le,
+           sizeof(pendingValue_le));
+    uint64_t presentValue_le = htole64(presentValue);
+    memcpy(&resp->pending_and_present_values[8], &presentValue_le,
+           sizeof(presentValue_le));
+
+    auto rc = decode_get_numeric_effecter_value_resp(
+        response, responseMsg.size() - hdrSize, &retcompletionCode,
+        &reteffecter_dataSize, &reteffecter_operState, retpendingValue,
+        retpresentValue);
+
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    EXPECT_EQ(completionCode, retcompletionCode);
+    EXPECT_EQ(effecter_dataSize, reteffecter_dataSize);
+    EXPECT_EQ(effecter_operState, reteffecter_operState);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    EXPECT_EQ(pendingValue, *(reinterpret_cast<uint64_t*>(retpendingValue)));
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    EXPECT_EQ(presentValue, *(reinterpret_cast<uint64_t*>(retpresentValue)));
+}
+
+TEST(GetNumericEffecterValue, testBadDecodeResponse64)
+{
+    std::array<uint8_t,
+               hdrSize + PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES + 21>
+        responseMsg{};
+
+    auto rc = decode_get_numeric_effecter_value_resp(
+        nullptr, responseMsg.size() - hdrSize, nullptr, nullptr, nullptr,
+        nullptr, nullptr);
+
+    EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
+
+    uint8_t completionCode = 0;
+    uint8_t effecter_dataSize = PLDM_EFFECTER_DATA_SIZE_SINT16;
+    uint8_t effecter_operState = EFFECTER_OPER_STATE_DISABLED;
+    uint64_t pendingValue = 0x12345678abcdef11;
+    uint64_t presentValue = 0xabcdef1112345678;
+
+    uint8_t retcompletionCode;
+    uint8_t reteffecter_dataSize;
+    uint8_t reteffecter_operState;
+    uint8_t retpendingValue[8];
+    uint8_t retpresentValue[8];
+
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
+    struct pldm_get_numeric_effecter_value_resp* resp =
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        reinterpret_cast<struct pldm_get_numeric_effecter_value_resp*>(
+            response->payload);
+
+    resp->completion_code = completionCode;
+    resp->effecter_data_size = effecter_dataSize;
+    resp->effecter_oper_state = effecter_operState;
+
+    uint16_t pendingValue_le = htole64(pendingValue);
+    memcpy(resp->pending_and_present_values, &pendingValue_le,
+           sizeof(pendingValue_le));
+    uint16_t presentValue_le = htole64(presentValue);
+    memcpy(&resp->pending_and_present_values[8], &presentValue_le,
+           sizeof(presentValue_le));
+
+    rc = decode_get_numeric_effecter_value_resp(
+        response, responseMsg.size() - hdrSize, &retcompletionCode,
+        &reteffecter_dataSize, &reteffecter_operState, retpendingValue,
+        retpresentValue);
+
+    EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
+
+    reteffecter_dataSize = 9;
+    reteffecter_operState = EFFECTER_OPER_STATE_DISABLED;
+
+    rc = decode_get_numeric_effecter_value_resp(
+        response, responseMsg.size() - hdrSize, nullptr, &reteffecter_dataSize,
+        &reteffecter_operState, nullptr, nullptr);
     EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
 }
 

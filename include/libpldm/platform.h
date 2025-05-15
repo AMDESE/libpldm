@@ -44,7 +44,6 @@ enum pldm_platform_transfer_flag {
 
 #define PLDM_SET_NUMERIC_EFFECTER_VALUE_RESP_BYTES    1
 #define PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES 4
-#define PLDM_SET_NUMERIC_EFFECTER_VALUE_MAX_REQ_BYTES 7
 
 #define PLDM_GET_PDR_REQ_BYTES 13
 
@@ -73,10 +72,8 @@ enum pldm_platform_transfer_flag {
 /* Minimum response length */
 #define PLDM_GET_PDR_MIN_RESP_BYTES		       12
 #define PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES 5
-#define PLDM_GET_NUMERIC_EFFECTER_VALUE_MAX_RESP_BYTES 14
 #define PLDM_GET_STATE_EFFECTER_STATES_MIN_RESP_BYTES  2
 #define PLDM_GET_SENSOR_READING_MIN_RESP_BYTES	       8
-#define PLDM_GET_SENSOR_READING_MAX_RESP_BYTES	       7
 #define PLDM_GET_STATE_SENSOR_READINGS_MIN_RESP_BYTES  2
 #define PLDM_GET_PDR_REPOSITORY_INFO_RESP_BYTES	       41
 
@@ -111,6 +108,7 @@ enum pldm_platform_transfer_flag {
 #define PLDM_PDR_NUMERIC_SENSOR_PDR_FIXED_LENGTH		       57
 #define PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_SENSOR_DATA_SIZE_MIN_LENGTH 3
 #define PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_RANGE_FIELD_MIN_LENGTH      9
+#define PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH 38
 #define PLDM_PDR_NUMERIC_SENSOR_PDR_MIN_LENGTH                                 \
 	(PLDM_PDR_NUMERIC_SENSOR_PDR_FIXED_LENGTH +                            \
 	 PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_SENSOR_DATA_SIZE_MIN_LENGTH +      \
@@ -155,9 +153,6 @@ enum pldm_platform_transfer_flag {
 #define PLDM_GET_EFFECTER_STATE_FIELD_COUNT_MIN 1
 #define PLDM_GET_EFFECTER_STATE_FIELD_COUNT_MAX 8
 
-/* Effecter value bounds */
-#define PLDM_EFFECTER_DATA_SIZE_MAX 8
-
 /* Container ID */
 /** @brief Table 2 - Parts of the Entity Identification Information format in
  *         PLDM Platform and Control spec, DSP0248 v1.2.2. "If this value is
@@ -171,9 +166,7 @@ enum pldm_effecter_data_size {
 	PLDM_EFFECTER_DATA_SIZE_UINT16,
 	PLDM_EFFECTER_DATA_SIZE_SINT16,
 	PLDM_EFFECTER_DATA_SIZE_UINT32,
-	PLDM_EFFECTER_DATA_SIZE_SINT32,
-	PLDM_EFFECTER_DATA_SIZE_UINT64,
-	PLDM_EFFECTER_DATA_SIZE_SINT64
+	PLDM_EFFECTER_DATA_SIZE_SINT32
 };
 
 enum pldm_range_field_format {
@@ -183,11 +176,9 @@ enum pldm_range_field_format {
 	PLDM_RANGE_FIELD_FORMAT_SINT16,
 	PLDM_RANGE_FIELD_FORMAT_UINT32,
 	PLDM_RANGE_FIELD_FORMAT_SINT32,
-	PLDM_RANGE_FIELD_FORMAT_REAL32,
-	PLDM_RANGE_FIELD_FORMAT_UINT64,
-	PLDM_RANGE_FIELD_FORMAT_SINT64
+	PLDM_RANGE_FIELD_FORMAT_REAL32
 };
-#define PLDM_RANGE_FIELD_FORMAT_MAX PLDM_RANGE_FIELD_FORMAT_SINT64
+#define PLDM_RANGE_FIELD_FORMAT_MAX PLDM_RANGE_FIELD_FORMAT_REAL32
 
 enum set_request { PLDM_NO_CHANGE = 0x00, PLDM_REQUEST_SET = 0x01 };
 
@@ -396,11 +387,9 @@ enum pldm_sensor_readings_data_type {
 	PLDM_SENSOR_DATA_SIZE_UINT16,
 	PLDM_SENSOR_DATA_SIZE_SINT16,
 	PLDM_SENSOR_DATA_SIZE_UINT32,
-	PLDM_SENSOR_DATA_SIZE_SINT32,
-	PLDM_SENSOR_DATA_SIZE_UINT64,
-	PLDM_SENSOR_DATA_SIZE_SINT64
+	PLDM_SENSOR_DATA_SIZE_SINT32
 };
-#define PLDM_SENSOR_DATA_SIZE_MAX PLDM_SENSOR_DATA_SIZE_SINT64
+#define PLDM_SENSOR_DATA_SIZE_MAX PLDM_SENSOR_DATA_SIZE_SINT32
 
 /** @brief PLDM PlatformEventMessage response status
  */
@@ -711,6 +700,20 @@ struct pldm_compact_numeric_sensor_pdr {
 	uint8_t sensor_name[1];
 } __attribute__((packed));
 
+
+/*        uint16_t sub_uri_length_bytes;
+        uint8_t sub_uri[1];
+        uint16_t add_resrc_id_count;
+        add_resource add_rsrc_child[1];
+        int32_t major_schema_version;
+        uint16_t major_schema_dict_length_bytes;
+        uint32_t major_schema_dict_signature;
+        uint8_t major_schema_name_length;
+        uint8_t major_schema_name[1];
+        uint16_t oem_count;
+	oem_record oem_list[1];
+} __attribute__((packed));
+*/
 /** @brief Encode PLDM state sensor PDR
  *
  * @param[in/out] sensor                 Structure to encode. All members of
@@ -747,8 +750,6 @@ typedef union {
 	int16_t value_s16;
 	uint32_t value_u32;
 	int32_t value_s32;
-	uint64_t value_u64;
-	int64_t value_s64;
 } union_effecter_data_size;
 
 /** @union union_range_field_format
@@ -765,8 +766,6 @@ typedef union {
 	uint32_t value_u32;
 	int32_t value_s32;
 	real32_t value_f32;
-	uint64_t value_u64;
-	int64_t value_s64;
 } union_range_field_format;
 
 /** @struct pldm_numeric_effecter_value_pdr
@@ -824,8 +823,6 @@ typedef union {
 	int16_t value_s16;
 	uint32_t value_u32;
 	int32_t value_s32;
-	uint64_t value_u64;
-	int64_t value_s64;
 } union_sensor_data_size;
 
 /** @struct pldm_value_pdr_hdr
@@ -954,6 +951,7 @@ struct pldm_effecter_aux_name_pdr {
 	uint8_t effecter_names[1];
 } __attribute__((packed));
 
+
 /** @struct pldm_file_descriptor_pdr
  *
  *  Structure representing PLDM File Descriptor PDR for unpacked value
@@ -974,6 +972,46 @@ struct pldm_file_descriptor_pdr {
 	uint8_t file_maximum_file_descriptor_count;
 	struct variable_field file_name;
 	struct variable_field oem_file_classification_name;
+};
+
+struct variable_len_field {
+        uint8_t *ptr;
+        size_t length;
+};
+
+typedef struct add_resource {
+        uint32_t add_resrc_id;
+        uint16_t length;
+        uint8_t *ptr;
+} add_resource;
+
+/*typedef struct oem_record {
+	uint8_t *ptr;
+        size_t oem_name_length_bytes;
+} oem_record;
+*/
+/** @struct pldm_redfish_resource_pdr
+ *
+ *  Structure representing PLDM redfish resource PDR
+ */
+struct pldm_redfish_resource_pdr {
+        struct pldm_value_pdr_hdr hdr;
+        uint32_t resource_id;
+        uint8_t resource_flags;
+        uint32_t cont_resrc_id;
+        struct variable_len_field prop_cont_resrc;
+        struct variable_len_field sub_uri;
+	size_t add_resrc_id_count;
+	//struct add_rsrc rsrc_array;
+	add_resource **add_rsrc_child;	
+        //uint32_t *add_resrc_id;
+	//struct variable_len_field add_rsrc_child
+	int32_t major_schema_version;
+        uint16_t major_schema_dict_length_bytes;
+        uint32_t major_schema_dict_signature;
+	struct variable_len_field major_schema;
+        uint16_t oem_count;
+        struct variable_len_field **oem_list;
 };
 
 /** @brief Encode PLDM state effecter PDR
@@ -1374,10 +1412,11 @@ struct pldm_get_sensor_reading_resp {
  * 				requested.
  *  @return pldm_completion_codes
  */
-int decode_set_numeric_effecter_value_req(
-	const struct pldm_msg *msg, size_t payload_length,
-	uint16_t *effecter_id, uint8_t *effecter_data_size,
-	uint8_t effecter_value[PLDM_EFFECTER_DATA_SIZE_MAX]);
+int decode_set_numeric_effecter_value_req(const struct pldm_msg *msg,
+					  size_t payload_length,
+					  uint16_t *effecter_id,
+					  uint8_t *effecter_data_size,
+					  uint8_t effecter_value[4]);
 
 /** @brief Create a PLDM response message for SetNumericEffecterValue
  *
@@ -2223,6 +2262,10 @@ int decode_numeric_sensor_data(const uint8_t *sensor_data,
 int decode_numeric_sensor_pdr_data(
 	const void *pdr_data, size_t pdr_data_length,
 	struct pldm_numeric_sensor_value_pdr *pdr_value);
+
+int decode_redfish_resource_pdr_data(
+        const void *pdr_data, size_t pdr_data_length,
+        struct pldm_redfish_resource_pdr *pdr_value);
 
 /* GetNumericEffecterValue */
 

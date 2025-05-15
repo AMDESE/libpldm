@@ -14,6 +14,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <uchar.h>
+#include <stdio.h>
+
+// NOLINTNEXTLINE(cert-dcl50-cpp)
+/*static void debug_printf(const char* fmt, ...)
+{
+    if (printf_enabled)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        vprintf(fmt, ap);
+        va_end(ap);
+    }
+}*/
 
 LIBPLDM_ABI_STABLE
 int encode_state_effecter_pdr(
@@ -718,10 +731,11 @@ int decode_get_pdr_resp_safe(const struct pldm_msg *msg, size_t payload_length,
 }
 
 LIBPLDM_ABI_STABLE
-int decode_set_numeric_effecter_value_req(
-	const struct pldm_msg *msg, size_t payload_length,
-	uint16_t *effecter_id, uint8_t *effecter_data_size,
-	uint8_t effecter_value[PLDM_EFFECTER_DATA_SIZE_MAX])
+int decode_set_numeric_effecter_value_req(const struct pldm_msg *msg,
+					  size_t payload_length,
+					  uint16_t *effecter_id,
+					  uint8_t *effecter_data_size,
+					  uint8_t effecter_value[4])
 {
 	PLDM_MSGBUF_DEFINE_P(buf);
 	int rc;
@@ -744,7 +758,7 @@ int decode_set_numeric_effecter_value_req(
 		return pldm_msgbuf_discard(buf, PLDM_ERROR_INVALID_DATA);
 	}
 
-	if (*effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT64) {
+	if (*effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT32) {
 		return pldm_msgbuf_discard(buf, PLDM_ERROR_INVALID_DATA);
 	}
 
@@ -801,7 +815,7 @@ int encode_set_numeric_effecter_value_req(uint8_t instance_id,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
-	if (effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT64) {
+	if (effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT32) {
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
@@ -846,17 +860,6 @@ int encode_set_numeric_effecter_value_req(uint8_t instance_id,
 		uint32_t val = *(uint32_t *)(effecter_value);
 		val = htole32(val);
 		memcpy(request->effecter_value, &val, sizeof(uint32_t));
-	} else if (effecter_data_size == PLDM_EFFECTER_DATA_SIZE_UINT64 ||
-		   effecter_data_size == PLDM_EFFECTER_DATA_SIZE_SINT64) {
-		if (payload_length !=
-		    PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES +
-			    PLDM_SET_NUMERIC_EFFECTER_VALUE_MAX_REQ_BYTES) {
-			return PLDM_ERROR_INVALID_LENGTH;
-		}
-
-		uint64_t val = *(uint64_t *)(effecter_value);
-		val = htole64(val);
-		memcpy(request->effecter_value, &val, sizeof(uint64_t));
 	}
 
 	request->effecter_id = htole16(effecter_id);
@@ -1803,6 +1806,116 @@ int decode_numeric_sensor_data(const uint8_t *sensor_data,
 }
 
 LIBPLDM_ABI_STABLE
+int decode_redfish_resource_pdr_data(
+        const void *pdr_data, size_t pdr_data_length,
+        struct pldm_redfish_resource_pdr *pdr_value)
+{
+        PLDM_MSGBUF_DEFINE_P(buf);
+        int rc;
+        size_t i=0;
+
+	printf("Inside decode_redfish_resource_pdr_data\n");
+	if (!pdr_data || !pdr_value) {
+                return PLDM_ERROR_INVALID_DATA;
+        }
+
+        rc = pldm_msgbuf_init_errno(buf, PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH,
+                                    pdr_data, pdr_data_length);
+        if (rc) {
+		
+                return pldm_xlate_errno(rc);
+        }
+
+        rc = pldm_msgbuf_extract_value_pdr_hdr(
+                buf, &pdr_value->hdr, PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH,
+                pdr_data_length);
+        if (rc) {
+                return pldm_xlate_errno(pldm_msgbuf_discard(buf, rc));
+        }
+
+        printf("EXTRACTING VALUES\n");
+	pldm_msgbuf_extract(buf, pdr_value->resource_id);
+        pldm_msgbuf_extract(buf, pdr_value->resource_flags);
+        pldm_msgbuf_extract(buf, pdr_value->cont_resrc_id);
+	//pldm_msgbuf_extract(buf, pdr_value->prop_cont_resrc.length);
+        pldm_msgbuf_extract_uint16_to_size(buf, pdr_value->prop_cont_resrc.length); 
+
+	printf("EXTRACTING PROPOSED RESOURCE of length %ld\n", pdr_value->prop_cont_resrc.length);
+	pldm_msgbuf_span_required(buf, pdr_value->prop_cont_resrc.length,
+                                  (void **)&pdr_value->prop_cont_resrc.ptr);
+
+	pldm_msgbuf_extract_uint16_to_size(buf, pdr_value->sub_uri.length);
+
+        printf("EXTRACTING SUBURI of length %ld\n", pdr_value->sub_uri.length);
+        pldm_msgbuf_span_required(buf, pdr_value->sub_uri.length,
+                                  (void **)&pdr_value->sub_uri.ptr);
+
+	pldm_msgbuf_extract_uint16_to_size(buf, pdr_value->add_resrc_id_count);
+
+	printf("*EXTRACTING ADDITIONAL RESOURCE of length %ld\n", pdr_value->add_resrc_id_count);
+
+	pdr_value->add_rsrc_child = malloc(pdr_value->add_resrc_id_count * sizeof(struct add_resource*));
+
+        for(i=0; i < pdr_value->add_resrc_id_count; i++)
+	{
+		pdr_value->add_rsrc_child[i] = malloc(sizeof(struct add_resource));
+		pldm_msgbuf_extract(buf, pdr_value->add_rsrc_child[i]->add_resrc_id);
+		printf("*EXTRACTING ADDITIONAL RESOURCE ID %d\n", pdr_value->add_rsrc_child[i]->add_resrc_id);
+                pldm_msgbuf_extract(buf, pdr_value->add_rsrc_child[i]->length);
+		printf("*EXTRACTING ADDITIONAL RESOURCE LENGTH %d\n", pdr_value->add_rsrc_child[i]->length);
+		pldm_msgbuf_span_required(buf, pdr_value->add_rsrc_child[i]->length, (void **)&pdr_value->add_rsrc_child[i]->ptr);
+                printf("*EXTRACTING ADDITIONAL RESOURCE NAME DONE\n");
+	}
+
+        pldm_msgbuf_extract(buf, pdr_value->major_schema_version);	
+        pldm_msgbuf_extract(buf, pdr_value->major_schema_dict_length_bytes);
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_dict_signature);
+        pldm_msgbuf_extract_uint8_to_size(buf, pdr_value->major_schema.length);
+	pldm_msgbuf_span_required(buf, pdr_value->major_schema.length,
+                                  (void **)&pdr_value->major_schema.ptr);
+
+	pldm_msgbuf_extract(buf, pdr_value->oem_count);
+
+	pdr_value->oem_list = malloc(pdr_value->oem_count * sizeof(struct variable_len_field*));
+
+	for(i=0;i<pdr_value->oem_count ;i++)
+	{
+		pdr_value->oem_list[i] = malloc(sizeof(struct variable_len_field));
+		pldm_msgbuf_extract_uint8_to_size(buf, pdr_value->oem_list[i]->length);
+		printf("*EXTRACTING OEM NAME LEN %ld\n", pdr_value->oem_list[i]->length);
+		pldm_msgbuf_span_required(buf, pdr_value->oem_list[i]->length, (void **)&pdr_value->oem_list[i]->ptr);
+		printf("*EXTRACTING OEM NAME DONE\n");		
+	}
+	/*for(i=0; i<pdr_value->add_resrc_id_count; i++)
+	{
+		pldm_msgbuf_extract(buf, pdr_value->rsrc_array[i].add_resrc_id);
+		printf("*EXTRACTING ADDITIONAL RESOURCE ID %d\n", pdr_value->rsrc_array[i].add_resrc_id);
+		pldm_msgbuf_extract_uint16_to_size(buf, pdr_value->rsrc_array[i].add_rsrc_child.length);
+                 printf("EXTRACTING ADDITIONAL RESOURCE CHILD of length %ld\n", pdr_value->rsrc_array[i].add_rsrc_child.length);
+		pldm_msgbuf_span_required(buf, pdr_value->rsrc_array[i].add_rsrc_child.length, 
+				  (void **)&(pdr_value->rsrc_array[i].add_rsrc_child.ptr)); 
+	}*/
+
+	/*pldm_msgbuf_span_required(buf, pdr_value->add_resrc_id_count, 
+			               (void **)&pdr_value->add_rsrc_child);
+*/
+        /*rc = pldm_msgbuf_extract_array_uint8(buf, pdr_value->prop_cont_resrc.length, pdr_value->prop_cont_resrc.ptr, pdr_value->prop_cont_resrc.length);
+        if (rc) {
+                return pldm_msgbuf_discard(buf, rc);
+        }*/
+        return PLDM_SUCCESS;
+}
+/*
+	pldm_msgbuf_extract(buf, pdr_value->prop_cont_resrc.length);
+	rc = pldm_msgbuf_extract_array_uint8(buf, pdr_value->sub_uri.length, pdr_value->sub_uri.ptr, pdr_value->sub_uri.length); 	
+        if (rc) {
+                return pldm_msgbuf_discard(buf, rc);
+        }
+
+	return PLDM_SUCCESS;
+}*/
+
+LIBPLDM_ABI_STABLE
 int decode_numeric_sensor_pdr_data(
 	const void *pdr_data, size_t pdr_data_length,
 	struct pldm_numeric_sensor_value_pdr *pdr_value)
@@ -1944,7 +2057,7 @@ int encode_get_numeric_effecter_value_resp(
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
-	if (effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT64) {
+	if (effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT32) {
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
@@ -2010,24 +2123,7 @@ int encode_get_numeric_effecter_value_resp(
 		memcpy((response->pending_and_present_values +
 			sizeof(uint32_t)),
 		       &val_present, sizeof(uint32_t));
-	} else if (effecter_data_size == PLDM_EFFECTER_DATA_SIZE_UINT64 ||
-		   effecter_data_size == PLDM_EFFECTER_DATA_SIZE_SINT64) {
-		if (payload_length !=
-		    PLDM_GET_NUMERIC_EFFECTER_VALUE_MIN_RESP_BYTES +
-			    PLDM_GET_NUMERIC_EFFECTER_VALUE_MAX_RESP_BYTES) {
-			return PLDM_ERROR_INVALID_LENGTH;
-		}
-		uint64_t val_pending = *(uint64_t *)pending_value;
-		val_pending = htole64(val_pending);
-		memcpy(response->pending_and_present_values, &val_pending,
-		       sizeof(uint64_t));
-		uint64_t val_present = *(uint64_t *)present_value;
-		val_present = htole64(val_present);
-		memcpy((response->pending_and_present_values +
-			sizeof(uint64_t)),
-		       &val_present, sizeof(uint64_t));
 	}
-
 	return PLDM_SUCCESS;
 }
 
@@ -2099,7 +2195,7 @@ int decode_get_numeric_effecter_value_resp(const struct pldm_msg *msg,
 		return pldm_xlate_errno(pldm_msgbuf_discard(buf, rc));
 	}
 
-	if (*effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT64) {
+	if (*effecter_data_size > PLDM_EFFECTER_DATA_SIZE_SINT32) {
 		return pldm_msgbuf_discard(buf, PLDM_ERROR_INVALID_DATA);
 	}
 
@@ -2391,7 +2487,7 @@ int decode_get_sensor_reading_resp(
 		return pldm_xlate_errno(pldm_msgbuf_discard(buf, rc));
 	}
 
-	if (*sensor_data_size > PLDM_SENSOR_DATA_SIZE_SINT64) {
+	if (*sensor_data_size > PLDM_SENSOR_DATA_SIZE_SINT32) {
 		return pldm_msgbuf_discard(buf, PLDM_ERROR_INVALID_DATA);
 	}
 
@@ -2426,7 +2522,7 @@ int encode_get_sensor_reading_resp(uint8_t instance_id, uint8_t completion_code,
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
-	if (sensor_data_size > PLDM_EFFECTER_DATA_SIZE_SINT64) {
+	if (sensor_data_size > PLDM_EFFECTER_DATA_SIZE_SINT32) {
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
@@ -2478,16 +2574,6 @@ int encode_get_sensor_reading_resp(uint8_t instance_id, uint8_t completion_code,
 		uint32_t val = *(uint32_t *)present_reading;
 		val = htole32(val);
 		memcpy(response->present_reading, &val, 4);
-	} else if (sensor_data_size == PLDM_EFFECTER_DATA_SIZE_UINT64 ||
-		   sensor_data_size == PLDM_EFFECTER_DATA_SIZE_SINT64) {
-		if (payload_length !=
-		    PLDM_GET_SENSOR_READING_MIN_RESP_BYTES +
-			    PLDM_GET_SENSOR_READING_MAX_RESP_BYTES) {
-			return PLDM_ERROR_INVALID_LENGTH;
-		}
-		uint64_t val = *(uint64_t *)present_reading;
-		val = htole64(val);
-		memcpy(response->present_reading, &val, 8);
 	}
 
 	return PLDM_SUCCESS;

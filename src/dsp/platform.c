@@ -1907,6 +1907,131 @@ int decode_numeric_sensor_pdr_data(
 }
 
 LIBPLDM_ABI_STABLE
+void free_redfish_resource_pdr_data(struct pldm_redfish_resource_pdr *pdr_value)
+{
+	if (!pdr_value) {
+		return;
+	}
+
+	if (pdr_value->additional_resrc) {
+		for (size_t i = 0; i < pdr_value->add_resrc_id_count; ++i) {
+			if (pdr_value->additional_resrc[i]) {
+				free(pdr_value->additional_resrc[i]);
+			}
+		}
+		free(pdr_value->additional_resrc);
+		pdr_value->additional_resrc = NULL;
+	}
+
+	if (pdr_value->oem_list) {
+		for (size_t i = 0; i < pdr_value->oem_count; ++i) {
+			if (pdr_value->oem_list[i]) {
+				free(pdr_value->oem_list[i]);
+			}
+		}
+		free(pdr_value->oem_list);
+		pdr_value->oem_list = NULL;
+	}
+}
+
+LIBPLDM_ABI_STABLE
+int decode_redfish_resource_pdr_data(const void *pdr_data,
+				     size_t pdr_data_length,
+				     struct pldm_redfish_resource_pdr *pdr_value)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (!pdr_data || !pdr_data_length || !pdr_value) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH,
+				    pdr_data, pdr_data_length);
+	if (rc) {
+		return pldm_xlate_errno(rc);
+	}
+
+	rc = pldm_msgbuf_extract_value_pdr_hdr(
+		buf, &pdr_value->hdr, PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH,
+		pdr_data_length);
+	if (rc) {
+		return pldm_xlate_errno(pldm_msgbuf_discard(buf, rc));
+	}
+
+	pldm_msgbuf_extract(buf, pdr_value->resource_id);
+	pldm_msgbuf_extract(buf, pdr_value->resource_flags.byte);
+	pldm_msgbuf_extract(buf, pdr_value->cont_resrc_id);
+
+	pldm_msgbuf_extract(buf, pdr_value->prop_cont_resrc_length);
+	pldm_msgbuf_span_required(buf, pdr_value->prop_cont_resrc_length,
+				  (void **)&pdr_value->prop_cont_resrc_name);
+
+	pldm_msgbuf_extract_uint16(buf, pdr_value->sub_uri_length);
+	pldm_msgbuf_span_required(buf, pdr_value->sub_uri_length,
+				  (void **)&pdr_value->sub_uri_name);
+
+	pldm_msgbuf_extract_uint16(buf, pdr_value->add_resrc_id_count);
+	pdr_value->additional_resrc = malloc(pdr_value->add_resrc_id_count *
+					     sizeof(struct add_resrc_t *));
+
+	if (!pdr_value->additional_resrc) {
+		return -ENOMEM;
+	}
+
+	for (size_t i = 0; i < pdr_value->add_resrc_id_count; i++) {
+		pdr_value->additional_resrc[i] =
+			calloc(1, sizeof(struct add_resrc_t));
+
+		if (!pdr_value->additional_resrc[i]) {
+			return -ENOMEM;
+		}
+
+		pldm_msgbuf_extract(buf,
+				    pdr_value->additional_resrc[i]->resrc_id);
+		pldm_msgbuf_extract(buf,
+				    pdr_value->additional_resrc[i]->length);
+		pldm_msgbuf_span_required(
+			buf, pdr_value->additional_resrc[i]->length,
+			(void **)&pdr_value->additional_resrc[i]->name);
+	}
+
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_version.alpha);
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_version.update);
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_version.minor);
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_version.major);
+
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_dict_length_bytes);
+	pldm_msgbuf_extract(buf, pdr_value->major_schema_dict_signature);
+
+	pldm_msgbuf_extract_uint8_to_size(buf, pdr_value->major_schema.length);
+	pldm_msgbuf_span_required(buf, pdr_value->major_schema.length,
+				  (void **)&pdr_value->major_schema.name);
+
+	pldm_msgbuf_extract(buf, pdr_value->oem_count);
+	pdr_value->oem_list =
+		malloc(pdr_value->oem_count * sizeof(struct oem_info_t *));
+	if (!pdr_value->oem_list) {
+		return -ENOMEM;
+	}
+
+	for (size_t i = 0; i < pdr_value->oem_count; i++) {
+		pdr_value->oem_list[i] = calloc(1, sizeof(struct oem_info_t));
+
+		if (!pdr_value->oem_list[i]) {
+			return -ENOMEM;
+		}
+
+		pldm_msgbuf_extract(buf, pdr_value->oem_list[i]->length);
+		pldm_msgbuf_span_required(
+			buf, pdr_value->oem_list[i]->length,
+			(void **)&pdr_value->oem_list[i]->name);
+	}
+	return PLDM_SUCCESS;
+}
+
+LIBPLDM_ABI_STABLE
 int encode_get_numeric_effecter_value_req(uint8_t instance_id,
 					  uint16_t effecter_id,
 					  struct pldm_msg *msg)

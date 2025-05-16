@@ -116,6 +116,9 @@ enum pldm_platform_transfer_flag {
 	 PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_SENSOR_DATA_SIZE_MIN_LENGTH +      \
 	 PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_RANGE_FIELD_MIN_LENGTH)
 
+/* Minimum length of redfish resource PDR */
+#define PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH 38
+
 /* Minimum length of numeric effecter PDR */
 #define PLDM_PDR_NUMERIC_EFFECTER_PDR_FIXED_LENGTH			   56
 #define PLDM_PDR_NUMERIC_EFFECTER_PDR_VARIED_EFFECTER_DATA_SIZE_MIN_LENGTH 2
@@ -974,6 +977,52 @@ struct pldm_file_descriptor_pdr {
 	uint8_t file_maximum_file_descriptor_count;
 	struct variable_field file_name;
 	struct variable_field oem_file_classification_name;
+};
+
+/** @struct variable_field
+ *
+ *  Structure representing variable field in the rde message
+ */
+struct variable_len_field {
+	size_t length;
+	uint8_t *name;
+};
+
+struct add_resrc_t {
+	uint32_t resrc_id;
+	uint16_t length;
+	uint8_t *name;
+};
+
+struct oem_info_t {
+	uint16_t length;
+	uint8_t *name;
+};
+
+/** @struct pldm_redfish_resource_pdr
+ *
+ *  Structure representing PLDM redfish resource PDR
+ *  Refer to: DSP0248_1.3.0: 28.26 Table 104
+ */
+// Aligning structure members as per the PLDM RDE specification
+// NOLINTNEXTLINE(clang-analyzer-optin.performance.Padding)
+struct pldm_redfish_resource_pdr {
+	struct pldm_value_pdr_hdr hdr;
+	uint32_t resource_id;
+	bitfield8_t resource_flags;
+	uint32_t cont_resrc_id;
+	uint16_t prop_cont_resrc_length;
+	uint8_t *prop_cont_resrc_name;
+	uint16_t sub_uri_length;
+	uint8_t *sub_uri_name;
+	uint16_t add_resrc_id_count;
+	struct add_resrc_t **additional_resrc;
+	ver32_t major_schema_version;
+	uint16_t major_schema_dict_length_bytes;
+	uint32_t major_schema_dict_signature;
+	struct variable_len_field major_schema;
+	uint16_t oem_count;
+	struct oem_info_t **oem_list;
 };
 
 /** @brief Encode PLDM state effecter PDR
@@ -2241,6 +2290,16 @@ int decode_numeric_sensor_pdr_data(
 	const void *pdr_data, size_t pdr_data_length,
 	struct pldm_numeric_sensor_value_pdr *pdr_value);
 
+/** @brief Decode Redfish Resource Pdr data
+ *
+ *  @param[in] pdr_data - pdr data for redfish resource
+ *  @param[in] pdr_data_length - Length of pdr data
+ *  @param[out] pdr_value - unpacked redfish resource PDR struct
+ */
+int decode_redfish_resource_pdr_data(
+	const void *pdr_data, size_t pdr_data_length,
+	struct pldm_redfish_resource_pdr *pdr_value);
+
 /* GetNumericEffecterValue */
 
 /** @brief Create a PLDM request message for GetNumericEffecterValue
@@ -2625,6 +2684,13 @@ pldm_platform_cper_event_event_data(struct pldm_platform_cper_event *event);
  */
 int decode_pldm_file_descriptor_pdr(const void *data, size_t data_length,
 				    struct pldm_file_descriptor_pdr *pdr);
+
+/** @brief Free memory allocated for redfish resource pdr
+ *
+ * @param[in] - pdr_value - pdr data for redfish resource 
+ */
+void free_redfish_resource_pdr_data(struct pldm_redfish_resource_pdr *pdr_value);
+
 #ifdef __cplusplus
 }
 #endif

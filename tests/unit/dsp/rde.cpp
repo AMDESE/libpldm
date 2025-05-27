@@ -2,9 +2,12 @@
 #include <libpldm/rde.h>
 
 #include <array>
+#include <cstring>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+// NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
 
 static const uint8_t FIXED_INSTANCE_ID = 15;
 
@@ -224,4 +227,88 @@ TEST(GetSchemaDictionaryTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(decodeCompletionCode, completionCode);
     EXPECT_EQ(decodeDictionaryFormat, dictionaryFormat);
     EXPECT_EQ(decodeTransferHandle, transferHandle);
+}
+
+TEST(GetSchemaURITest, EncodeDecodeRequestSuccess)
+{
+    uint32_t resourceID = 0xDEADBEEF;
+    uint8_t requestedSchemaClass = PLDM_RDE_SCHEMA_MAJOR;
+
+    std::array<uint8_t,
+               sizeof(struct pldm_msg_hdr) + PLDM_RDE_SCHEMA_URI_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_get_schema_uri_req(FIXED_INSTANCE_ID, resourceID,
+                                        requestedSchemaClass, 0, request),
+              PLDM_SUCCESS);
+
+    uint32_t decodeResourceID;
+    uint8_t decodeRequestedSchemaClass;
+    uint8_t decodeOemExtensionNumber;
+
+    EXPECT_EQ(decode_get_schema_uri_req(request, &decodeResourceID,
+                                        &decodeRequestedSchemaClass,
+                                        &decodeOemExtensionNumber),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_SCHEMA_URI, PLDM_REQUEST);
+
+    EXPECT_EQ(decodeResourceID, resourceID);
+    EXPECT_EQ(decodeRequestedSchemaClass, requestedSchemaClass);
+    EXPECT_EQ(decodeOemExtensionNumber, 0);
+}
+
+TEST(GetSchemaURITest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    constexpr uint8_t stringFragmentCount = 3;
+
+    std::array<std::string, stringFragmentCount> schemaURI = {
+        "fragment1", "fragment2", "fragment3"};
+
+    std::vector<pldm_rde_varstring> varstrings(stringFragmentCount);
+    size_t payloadLength = PLDM_RDE_SCHEMA_URI_RESP_FIXED_BYTES;
+
+    for (int i = 0; i < stringFragmentCount; ++i)
+    {
+        varstrings[i].string_format = 0x00; // Example format
+        varstrings[i].string_length_bytes =
+            schemaURI[i].size() + 1; // Include null terminator
+        varstrings[i].string_data = const_cast<char*>(schemaURI[i].c_str());
+        payloadLength +=
+            PLDM_RDE_VARSTRING_HEADER_SIZE + varstrings[i].string_length_bytes;
+    }
+
+    std::vector<uint8_t> response(sizeof(struct pldm_msg_hdr) + payloadLength);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    pldm_msg* responsePtr = reinterpret_cast<pldm_msg*>(&response[0]);
+
+    EXPECT_EQ(encode_get_schema_uri_resp(FIXED_INSTANCE_ID, completionCode,
+                                         stringFragmentCount, varstrings.data(),
+                                         responsePtr),
+              PLDM_SUCCESS);
+    checkHeader(responsePtr, PLDM_GET_SCHEMA_URI, PLDM_RESPONSE);
+
+    uint8_t decodeCompletionCode;
+    uint8_t decodeStringFragmentCount;
+    size_t actual_uri_len = 0;
+    uint8_t buffer[sizeof(struct pldm_rde_varstring) +
+                   PLDM_RDE_SCHEMA_URI_RESP_MAX_VAR_BYTES];
+    pldm_rde_varstring* decodeSchemaURI = (struct pldm_rde_varstring*)buffer;
+
+    EXPECT_EQ(decode_get_schema_uri_resp(
+                  responsePtr, &decodeCompletionCode,
+                  &decodeStringFragmentCount, decodeSchemaURI,
+                  PLDM_RDE_SCHEMA_URI_RESP_MAX_VAR_BYTES, &actual_uri_len),
+              PLDM_SUCCESS);
+
+    checkHeader(responsePtr, PLDM_GET_SCHEMA_URI, PLDM_RESPONSE);
+    EXPECT_EQ(decodeCompletionCode, completionCode);
+    EXPECT_EQ(decodeStringFragmentCount, stringFragmentCount);
+
+    for (uint8_t i = 0; i < stringFragmentCount; ++i)
+    {
+        EXPECT_EQ(decodeSchemaURI[i].string_data, schemaURI[i]);
+    }
 }

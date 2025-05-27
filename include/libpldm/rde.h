@@ -61,6 +61,12 @@ enum pldm_rde_commands {
 	PLDM_RDE_CMD_NEGOTIATE_MEDIUM_PARAMETERS
 #define PLDM_GET_SCHEMA_DICTIONARY \
 	PLDM_RDE_CMD_GET_SCHEMA_DICTIONARY
+#define PLDM_GET_SCHEMA_URI \
+	PLDM_RDE_CMD_GET_SCHEMA_URI
+#define PLDM_RDE_ERROR_UNSUPPORTED \
+	PLDM_RDE_CC_ERROR_UNSUPPORTED
+#define PLDM_RDE_ERROR_NO_SUCH_RESOURCE \
+	PLDM_RDE_CC_ERROR_NO_SUCH_RESOURCE
 
 /* Response lengths are inclusive of completion code */
 #define PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES	    3
@@ -70,6 +76,9 @@ enum pldm_rde_commands {
 #define PLDM_RDE_MIN_TRANSFER_SIZE_BYTES		    64
 #define PLDM_RDE_SCHEMA_DICTIONARY_REQ_BYTES		    5
 #define PLDM_RDE_SCHEMA_DICTIONARY_RESP_BYTES		    6
+#define PLDM_RDE_SCHEMA_URI_REQ_BYTES			    6
+#define PLDM_RDE_SCHEMA_URI_RESP_FIXED_BYTES		    2
+#define PLDM_RDE_SCHEMA_URI_RESP_MAX_VAR_BYTES		    500
 
 enum pldm_rde_varstring_format {
 	PLDM_RDE_VARSTRING_UNKNOWN = 0,
@@ -126,6 +135,9 @@ enum device_capabilities_flags {
 	PLDM_RDE_DEVICE_CAP_BEJ_1_1_SUPPORT = 1 << 2,
 	// Reserved bits [7:3]
 };
+
+// Fixed overhead per varstring: format (1 byte) + length (1 byte)
+#define PLDM_RDE_VARSTRING_HEADER_SIZE 2
 
 /* @brief varstring PLDM data type */
 struct pldm_rde_varstring {
@@ -287,6 +299,86 @@ int decode_get_schema_dictionary_resp(const struct pldm_msg *msg,
 				      uint8_t *completion_code,
 				      uint8_t *dictionary_format,
 				      uint32_t *transfer_handle);
+
+/**
+ * @brief Encode GetSchemaURI request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] resource_id - The ResourceID of a resource in the Redfish
+ *            Resource PDR.A ResourceID of 0xFFFFFFFF may be supplied to
+ *            retrieve URIs for schemas common to all RDE Device resources.
+ * @param[in] req_schema_class - The class of schema being requested.
+ * @param[in] oem_extension_number - Shall be zero for a standard
+ *            DMTF-published schema,or the one-based OEM extension to a
+ *            standard schema.
+ * @param[out] msg - Request message.
+ * @return pldm_completion_codes.
+ */
+int encode_get_schema_uri_req(uint8_t instance_id, uint32_t resource_id,
+			      uint8_t req_schema_class,
+			      uint8_t oem_extension_number,
+			      struct pldm_msg *msg);
+
+/**
+ * @brief Decode GetSchemaURI request.
+ *
+ * @param[in] msg - Request message.
+ * @param[out] resource_id - The ResourceID of a resource in the Redfish
+ *             Resource PDR.
+ * @param[out] req_schema_class - The class of schema being requested.
+ * @param[out] oem_extension_number - The OEM extension number.
+ * @return pldm_completion_codes.
+ */
+int decode_get_schema_uri_req(const struct pldm_msg *msg, uint32_t *resource_id,
+			      uint8_t *req_schema_class,
+			      uint8_t *oem_extension_number);
+
+/**
+ * @brief Encode GetSchemaURI response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - Completion code of the response.
+ * @param[in] string_fragment_count - The number of fragments into which the
+ *            URI string is broken.
+ * @param[in] schema_uri - Array of pointers to URI string fragments.
+ * @param[in] payload_length - Length of response message payload.
+ * @param[out] msg - Response message.
+ * @return pldm_completion_codes.
+ */
+int encode_get_schema_uri_resp(uint8_t instance_id, uint8_t completion_code,
+			       uint8_t string_fragment_count,
+			       const struct pldm_rde_varstring *schema_uri,
+			       struct pldm_msg *msg);
+
+/**
+ * @brief Decode GetSchemaURI response.
+ * This function parses the response payload of a GetSchemaURI PLDM command.
+ * It extracts the completion code, the number of URI string fragments, and
+ * reconstructs the full schema URI from the fragments into a caller-provided
+ * buffer.
+ *
+ * TODO: Need to revisit this memory allocation strategy
+ * The caller must allocate a buffer large enough to hold the reconstructed
+ * URI, including the null terminator. The buffer should be cast to a
+ * `struct pldm_rde_varstring *` and passed to this function.
+
+ *
+ * @param[in] msg - Response message.
+ * @param[out] completion_code - Completion code of the response.
+ * @param[out] string_fragment_count - The number of fragments into which the
+ *             URI string is broken.
+ * @param[out] schema_uri_array - Pointer to a pre-allocated buffer to store
+ *                                the reconstructed URI.
+ * @param[in] payload_length - Max Length of response message payload.
+ * @param[out] actual_uri_len - Actual length of the reconstructed URI.
+ * @return pldm_completion_codes.
+ *
+ */
+int decode_get_schema_uri_resp(const struct pldm_msg *msg,
+			       uint8_t *completion_code,
+			       uint8_t *string_fragment_count,
+			       struct pldm_rde_varstring *schema_uri_array,
+			       size_t payload_length, size_t *actual_uri_len);
 
 #ifdef __cplusplus
 }

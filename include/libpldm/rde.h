@@ -21,12 +21,15 @@ extern "C" {
 #define PLDM_RDE_SCHEMA_URI_REQ_BYTES			    6
 #define PLDM_RDE_SCHEMA_URI_RESP_FIXED_BYTES		    2
 #define PLDM_RDE_SCHEMA_URI_RESP_MAX_VAR_BYTES		    500
+#define PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES		    4
+#define PLDM_RDE_GET_RESOURCE_ETAG_RESP_FIXED_BYTES	    4 // Include NULL
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
 	PLDM_NEGOTIATE_MEDIUM_PARAMETERS = 0x02,
 	PLDM_GET_SCHEMA_DICTIONARY = 0x03,
 	PLDM_GET_SCHEMA_URI = 0x04,
+	PLDM_GET_RESOURCE_ETAG = 0x05,
 };
 
 enum pldm_rde_varstring_format {
@@ -108,6 +111,7 @@ enum pldm_rde_schema_type {
 enum pldm_rde_completion_codes {
 	PLDM_RDE_ERROR_UNSUPPORTED = 0x89,
 	PLDM_RDE_ERROR_NO_SUCH_RESOURCE = 0x92,
+	PLDM_RDE_ERROR_ETAG_CALCULATION_ONGOING = 0x93,
 };
 
 /**
@@ -380,6 +384,71 @@ int decode_get_schema_uri_resp(const struct pldm_msg *msg,
 			       uint8_t *string_fragment_count,
 			       struct pldm_rde_varstring *schema_uri_array,
 			       size_t payload_length, size_t *actual_uri_len);
+
+/**
+ * @brief Encode GetResourceETag request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] resource_id - The ResourceID of a resource in the Redfish
+ * Resource PDR for the instance from which to get an ETag digest;
+ * or 0xFFFF FFFF to get a global digest of all resource-based data
+ * within the RDE Device. 
+ * @param[out] msg - Request message.
+ * @return pldm_completion_codes.
+ */
+int encode_get_resource_etag_req(uint8_t instance_id, uint32_t resource_id,
+				 struct pldm_msg *msg);
+/**
+ * @brief Decode GetResourceETag request.
+ *
+ * @param[in] msg - Request message.
+ * @param[out] resource_id - Pointer to a uint32_t variable.
+ * @return pldm_completion_codes.
+ */
+int decode_get_resource_etag_req(const struct pldm_msg *msg,
+				 uint32_t *resource_id);
+/**
+ * @brief Encode GetResourceETag response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] etag_string_data - The RFC7232-compliant ETag string data; the string
+ * text format shall be UTF-8. Either a strong or a weak etag may be returned.
+ * This field shall be omitted if the CompletionCode is not SUCCESS.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_get_resource_etag_resp(uint8_t instance_id, uint8_t completion_code,
+				  const char *etag_string_data,
+				  struct pldm_msg *msg);
+/**
+ * @brief Decode GetResourceETag Response
+ *
+ * @param[in] msg - Response Message
+ * @param[in] payload_length - Length of the payload
+ * @param[out] completion_code - Completion Code
+ * @param[out] dictionary_format - Dictionary Format for the particular
+ * resource id
+ * @param[out] etag - The RFC7232-compliant ETag string data; the string
+ * text format shall be UTF-8. Either a strong or a weak etag may be returned.
+ * This field shall be omitted if the CompletionCode is not SUCCESS.
+ * dictionary.
+ * @return pldm_completion_codes.
+ * Note: In the event that the RDE Device cannot provide a response to this
+ * command within the PT1 time period (defined in DSP0240), the RDE Device
+ * may provide completion code ETAG_CALCULATION_ONGOING and continue the
+ * process of generating the ETag. The MC may then poll for the completed
+ * ETag by repeating the same GetResourceETag command that it gave that
+ * previously yielded this result. The RDE Device in turn shall signal
+ * whether it has completed the calculation by responding with a completion
+ * code of either SUCCESS (the calculation is done) or ETAG_CALCULATION_ONGOING
+ * (otherwise). It is recommended that the MC delay for an integer multiple
+ * of PT1 between retry attempts.
+ */
+int decode_get_resource_etag_resp(const struct pldm_msg *msg,
+				  size_t payload_length,
+				  uint8_t *completion_code,
+				  struct pldm_rde_varstring *etag);
 
 #ifdef __cplusplus
 }

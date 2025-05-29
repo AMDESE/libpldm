@@ -684,3 +684,149 @@ int decode_get_schema_uri_resp(const struct pldm_msg *msg,
 
 	return pldm_msgbuf_complete(buf);
 }
+
+LIBPLDM_ABI_STABLE
+int encode_get_resource_etag_req(uint8_t instance_id, uint32_t resource_id,
+				 struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.msg_type = PLDM_REQUEST;
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.command = PLDM_GET_RESOURCE_ETAG;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES,
+				    msg->payload,
+				    PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES);
+	if (rc) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, resource_id);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_get_resource_etag_req(const struct pldm_msg *msg,
+				 uint32_t *resource_id)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || resource_id == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES,
+				    msg->payload,
+				    PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES);
+
+	if (rc) {
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, resource_id);
+
+	return pldm_msgbuf_complete(buf);
+}
+LIBPLDM_ABI_STABLE
+int encode_get_resource_etag_resp(uint8_t instance_id, uint8_t completion_code,
+				  const char *etag_string_data,
+				  struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || etag_string_data == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (completion_code != PLDM_SUCCESS) {
+		return encode_cc_only_resp(instance_id, PLDM_RDE,
+					   PLDM_GET_RESOURCE_ETAG,
+					   completion_code, msg);
+	}
+
+	// Length should include NULL terminator.
+	size_t str_len = strlen(etag_string_data) + 1;
+	if (str_len > 255) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.msg_type = PLDM_RESPONSE;
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.command = PLDM_GET_RESOURCE_ETAG;
+
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_RDE_GET_RESOURCE_ETAG_RESP_FIXED_BYTES,
+				    msg->payload,
+				    PLDM_GET_RESOURCE_ETAG + str_len);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, completion_code);
+	pldm_msgbuf_insert_uint8(buf, PLDM_RDE_VARSTRING_UTF_8);
+	pldm_msgbuf_insert(buf, (uint8_t)str_len);
+	rc = pldm_msgbuf_insert_array(
+		buf, str_len, (const uint8_t *)etag_string_data, str_len);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_get_resource_etag_resp(const struct pldm_msg *msg,
+				  size_t payload_length,
+				  uint8_t *completion_code,
+				  struct pldm_rde_varstring *etag)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || completion_code == NULL || etag == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_RDE_GET_RESOURCE_ETAG_RESP_FIXED_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, completion_code);
+
+	if (*completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	pldm_msgbuf_extract_p(buf, &etag->string_format);
+	pldm_msgbuf_extract_p(buf, &etag->string_length_bytes);
+
+	pldm_msgbuf_span_required(buf, etag->string_length_bytes,
+				  (void **)&etag->string_data);
+
+	return pldm_msgbuf_complete(buf);
+}

@@ -1056,9 +1056,11 @@ TEST(SetNumericEffecterValue, testGoodEncodeRequest64)
             request->payload);
     EXPECT_EQ(effecter_id, req->effecter_id);
     EXPECT_EQ(effecter_data_size, req->effecter_data_size);
-    uint64_t* val = (uint64_t*)req->effecter_value;
-    *val = le64toh(*val);
-    EXPECT_EQ(effecter_value, *val);
+
+    uint64_t val_le = 0;
+    std::memcpy(&val_le, req->effecter_value, sizeof(val_le));
+    uint64_t val = le64toh(val_le);
+    EXPECT_EQ(effecter_value, val);
 }
 
 TEST(GetStateSensorReadings, testGoodEncodeResponse)
@@ -3865,9 +3867,11 @@ TEST(GetSensorReading, testGoodEncodeResponse64)
     EXPECT_EQ(presentState, resp->present_state);
     EXPECT_EQ(previousState, resp->previous_state);
     EXPECT_EQ(eventState, resp->event_state);
-    EXPECT_EQ(presentReading,
-              // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
-              *(reinterpret_cast<uint64_t*>(&resp->present_reading[0])));
+
+    uint64_t val64 = 0;
+    std::memcpy(&val64, &resp->present_reading[0], sizeof(val64));
+    val64 = le64toh(val64);
+    EXPECT_EQ(presentReading, val64);
 }
 
 TEST(GetSensorReading, testGoodDecodeResponse64)

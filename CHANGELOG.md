@@ -371,6 +371,7 @@ Deprecated since v0.13.0:
 - rde: Add NegotiateMediumParameters support
 - rde: Add GetSchemaDictionary support
 - rde: Add GetSchemaURI support
+- rde: Add GetResourceETag support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

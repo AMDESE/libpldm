@@ -312,3 +312,62 @@ TEST(GetSchemaURITest, EncodeDecodeResponseSuccess)
         EXPECT_EQ(decodeSchemaURI[i].string_data, schemaURI[i]);
     }
 }
+
+TEST(GetResourceEtagTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t resorceID = 0xDEADBEEF;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(
+        encode_get_resource_etag_req(FIXED_INSTANCE_ID, resorceID, request),
+        PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_RESOURCE_ETAG, PLDM_REQUEST);
+
+    uint32_t decodeResorceID;
+
+    EXPECT_EQ(decode_get_resource_etag_req(request, &decodeResorceID),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodeResorceID, resorceID);
+}
+
+TEST(GetResourceEtagTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = 0;
+    constexpr const char* etag_string_data = "TestData";
+
+    constexpr size_t payloadLength =
+        PLDM_RDE_GET_RESOURCE_ETAG_RESP_FIXED_BYTES + 8;
+
+    // Already has the space for the null character in sizeof(struct
+    // pldm_rde_negotiate_redfish_parameters_resp).
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLength>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_get_resource_etag_resp(FIXED_INSTANCE_ID, completionCode,
+                                            etag_string_data, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_GET_RESOURCE_ETAG, PLDM_RESPONSE);
+
+    // verify payload.
+    uint8_t decodedCompletionCode;
+    struct pldm_rde_varstring decodedEtag;
+
+    EXPECT_EQ(decode_get_resource_etag_resp(response, payloadLength,
+                                            &decodedCompletionCode,
+                                            &decodedEtag),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedEtag.string_length_bytes, strlen(etag_string_data) + 1);
+    EXPECT_EQ(strncmp(etag_string_data, decodedEtag.string_data,
+                      strlen(etag_string_data)),
+              0);
+}

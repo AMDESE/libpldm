@@ -2050,6 +2050,90 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 }
 
 LIBPLDM_ABI_STABLE
+void free_redfish_action_pdr_data(struct pldm_redfish_action_pdr *pdr_value)
+{
+	if (!pdr_value) {
+		return;
+	}
+
+	free(pdr_value->related_resrc_id);
+	pdr_value->related_resrc_id = NULL;
+
+	if (pdr_value->action) {
+		for (size_t i = 0; i < pdr_value->action_count; ++i) {
+			if (pdr_value->action[i]) {
+				free(pdr_value->action[i]);
+			}
+		}
+		free(pdr_value->action);
+		pdr_value->action = NULL;
+	}
+}
+
+LIBPLDM_ABI_STABLE
+int decode_redfish_action_pdr_data(const void *pdr_data, size_t pdr_data_length,
+				   struct pldm_redfish_action_pdr *pdr_value)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (!pdr_data || !pdr_data_length || !pdr_value) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_PDR_REDFISH_ACTION_PDR_MIN_LENGTH,
+				    pdr_data, pdr_data_length);
+	if (rc) {
+		return pldm_xlate_errno(rc);
+	}
+
+	rc = pldm_msgbuf_extract_value_pdr_hdr(
+		buf, &pdr_value->hdr, PLDM_PDR_REDFISH_ACTION_PDR_MIN_LENGTH,
+		pdr_data_length);
+	if (rc) {
+		return pldm_xlate_errno(pldm_msgbuf_discard(buf, rc));
+	}
+
+	pldm_msgbuf_extract(buf, pdr_value->action_pdr_index);
+	pldm_msgbuf_extract(buf, pdr_value->related_resrc_count);
+
+	pdr_value->related_resrc_id =
+		malloc(pdr_value->related_resrc_count * sizeof(uint32_t));
+
+	for (size_t i = 0; i < pdr_value->related_resrc_count; i++) {
+		pldm_msgbuf_extract(buf, pdr_value->related_resrc_id[i]);
+	}
+
+	pldm_msgbuf_extract(buf, pdr_value->action_count);
+	pdr_value->action = malloc(pdr_value->action_count *
+				   sizeof(struct action_info_t *));
+
+	if (!pdr_value->action) {
+		return -ENOMEM;
+	}
+
+	for (size_t i = 0; i < pdr_value->action_count; i++) {
+		pdr_value->action[i] = calloc(1, sizeof(struct action_info_t));
+
+		if (!pdr_value->action[i]) {
+			return -ENOMEM;
+		}
+
+		pldm_msgbuf_extract(buf,
+				    (pdr_value->action[i]->name_length_bytes));
+		pldm_msgbuf_span_required(
+			buf, pdr_value->action[i]->name_length_bytes,
+			(void **)&pdr_value->action[i]->name);
+		pldm_msgbuf_extract(buf,
+				    pdr_value->action[i]->path_length_bytes);
+		pldm_msgbuf_span_required(
+			buf, pdr_value->action[i]->path_length_bytes,
+			(void **)&pdr_value->action[i]->path);
+	}
+	return PLDM_SUCCESS;
+}
+
+LIBPLDM_ABI_STABLE
 int encode_get_numeric_effecter_value_req(uint8_t instance_id,
 					  uint16_t effecter_id,
 					  struct pldm_msg *msg)

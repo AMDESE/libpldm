@@ -119,6 +119,9 @@ enum pldm_platform_transfer_flag {
 /* Minimum length of redfish resource PDR */
 #define PLDM_PDR_REDFISH_RESOURCE_PDR_MIN_LENGTH 38
 
+/* Minimum length of redfish action PDR */
+#define PLDM_PDR_REDFISH_ACTION_PDR_MIN_LENGTH 7
+
 /* Minimum length of numeric effecter PDR */
 #define PLDM_PDR_NUMERIC_EFFECTER_PDR_FIXED_LENGTH			   56
 #define PLDM_PDR_NUMERIC_EFFECTER_PDR_VARIED_EFFECTER_DATA_SIZE_MIN_LENGTH 2
@@ -1023,6 +1026,27 @@ struct pldm_redfish_resource_pdr {
 	struct variable_len_field major_schema;
 	uint16_t oem_count;
 	struct oem_info_t **oem_list;
+};
+
+struct action_info_t {
+	uint8_t name_length_bytes;
+	uint8_t *name;
+	uint8_t path_length_bytes;
+	uint8_t *path;
+};
+
+/** @struct pldm_redfish_resource_pdr
+ *
+ *  Structure representing PLDM redfish resource PDR
+ *  Refer to: DSP0248_1.3.0: 28.28 Table 106
+ */
+struct pldm_redfish_action_pdr {
+	struct pldm_value_pdr_hdr hdr;
+	uint8_t action_pdr_index;
+	uint16_t related_resrc_count;
+	uint32_t *related_resrc_id;
+	uint8_t action_count;
+	struct action_info_t **action;
 };
 
 /** @brief Encode PLDM state effecter PDR
@@ -2283,6 +2307,15 @@ int decode_redfish_resource_pdr_data(
 	const void *pdr_data, size_t pdr_data_length,
 	struct pldm_redfish_resource_pdr *pdr_value);
 
+/** @brief Decode Redfish Action Pdr data
+ *
+ *  @param[in] pdr_data - pdr data for redfish action
+ *  @param[in] pdr_data_length - Length of pdr data
+ *  @param[out] pdr_value - unpacked redfish action PDR struct
+ */
+int decode_redfish_action_pdr_data(const void *pdr_data, size_t pdr_data_length,
+				   struct pldm_redfish_action_pdr *pdr_value);
+
 /* GetNumericEffecterValue */
 
 /** @brief Create a PLDM request message for GetNumericEffecterValue
@@ -2673,6 +2706,12 @@ int decode_pldm_file_descriptor_pdr(const void *data, size_t data_length,
  * @param[in] - pdr_value - pdr data for redfish resource 
  */
 void free_redfish_resource_pdr_data(struct pldm_redfish_resource_pdr *pdr_value);
+
+/** @brief Free Free memory allocated for redfish action pdr
+ *
+ * @param[in] - pdr_value - pdr data for redfish action
+ */
+void free_redfish_action_pdr_data(struct pldm_redfish_action_pdr *pdr_value);
 
 #ifdef __cplusplus
 }

@@ -374,7 +374,7 @@ TEST(GetResourceEtagTest, EncodeDecodeResponseSuccess)
                       strlen(etag_string_data)),
               0);
 }
-#if 0
+
 TEST(RDEMultipartSendTest, EncodeDecodeRequestSuccess)
 {
     uint32_t dataTransferHandle = 1;
@@ -384,19 +384,18 @@ TEST(RDEMultipartSendTest, EncodeDecodeRequestSuccess)
     const uint32_t dataLengthBytes = 8;
     uint32_t dataIntegrityChecksum = 0x10;
     bool addChecksum = false;
-    std::array<uint8_t, dataLengthBytes> payload = {0x01, 0x02, 0x03, 0x04,
-                                                    0x05, 0x06, 0x07, 0x08};
+    const uint32_t payloadLen =
+        PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES + dataLengthBytes;
+    std::array<uint8_t, dataLengthBytes> data = {0x01, 0x02, 0x03, 0x04,
+                                                 0x05, 0x06, 0x07, 0x08};
 
-    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
-                            PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES +
-                            dataLengthBytes>
-        requestMsg{};
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
     pldm_msg* request = (pldm_msg*)requestMsg.data();
 
     EXPECT_EQ(encode_rde_multipart_send_req(
                   FIXED_INSTANCE_ID, dataTransferHandle, operationId,
                   transferFlag, nextDataTransferHandle, dataLengthBytes,
-                  payload.data(), dataIntegrityChecksum, addChecksum, request),
+                  data.data(), dataIntegrityChecksum, addChecksum, request),
               PLDM_SUCCESS);
 
     checkHeader(request, PLDM_RDE_MULTIPART_SEND, PLDM_REQUEST);
@@ -406,15 +405,15 @@ TEST(RDEMultipartSendTest, EncodeDecodeRequestSuccess)
     uint8_t decodeTransferFlag;
     uint32_t decodeNextDataTransferHandle;
     uint32_t decodeDataLengthBytes;
-    uint32_t decodeDataIntegrityChecksum;
+    uint32_t decodeDataIntegrityChecksum = 0;
 
-    std::array<uint8_t, dataLengthBytes> decodePayload = {0};
+    std::array<uint8_t, dataLengthBytes> decodeData = {0};
 
     EXPECT_EQ(decode_rde_multipart_send_req(
-                  request, &decodeDataTransferHandle, &decodeOperationId,
-                  &decodeTransferFlag, &decodeNextDataTransferHandle,
-                  &decodeDataLengthBytes, decodePayload.data(),
-                  &decodeDataIntegrityChecksum, addChecksum),
+                  request, payloadLen, &decodeDataTransferHandle,
+                  &decodeOperationId, &decodeTransferFlag,
+                  &decodeNextDataTransferHandle, &decodeDataLengthBytes,
+                  decodeData.data(), &decodeDataIntegrityChecksum, addChecksum),
               PLDM_SUCCESS);
 
     EXPECT_EQ(decodeDataTransferHandle, dataTransferHandle);
@@ -422,10 +421,9 @@ TEST(RDEMultipartSendTest, EncodeDecodeRequestSuccess)
     EXPECT_EQ(decodeTransferFlag, transferFlag);
     EXPECT_EQ(decodeNextDataTransferHandle, nextDataTransferHandle);
     EXPECT_EQ(decodeDataLengthBytes, dataLengthBytes);
-    EXPECT_EQ(decodePayload, payload);
+    EXPECT_EQ(decodeData, data);
 }
-#endif
-#if 1
+
 TEST(RDEMultipartSendTest, EncodeDecodeRequestWithChecksumSuccess)
 {
     uint32_t dataTransferHandle = 1;
@@ -477,8 +475,7 @@ TEST(RDEMultipartSendTest, EncodeDecodeRequestWithChecksumSuccess)
     EXPECT_EQ(decodeData, data);
     EXPECT_EQ(decodeDataIntegrityChecksum, dataIntegrityChecksum);
 }
-#endif
-#if 1
+
 TEST(RDEMultipartSendTest, EncodeDecodeResponseSuccess)
 {
     uint8_t completionCode = 0;
@@ -509,4 +506,3 @@ TEST(RDEMultipartSendTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(decodedCompletionCode, completionCode);
     EXPECT_EQ(decodedtransferOperation, transferOperation);
 }
-#endif

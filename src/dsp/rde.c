@@ -830,3 +830,175 @@ int decode_get_resource_etag_resp(const struct pldm_msg *msg,
 
 	return pldm_msgbuf_complete(buf);
 }
+
+LIBPLDM_ABI_STABLE
+int encode_rde_multipart_send_req(uint8_t instance_id,
+				  uint32_t data_transfer_handle,
+				  uint16_t operation_id, uint8_t transfer_flag,
+				  uint32_t next_data_transfer_handle,
+				  uint32_t data_length_bytes, uint8_t *data,
+				  uint32_t data_integrity_checksum,
+				  bool add_checksum, struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || data == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (!is_transfer_flag_valid(transfer_flag)) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.msg_type = PLDM_REQUEST;
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.command = PLDM_RDE_MULTIPART_SEND;
+
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(
+		buf, PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES, msg->payload,
+		PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES + data_length_bytes +
+			(add_checksum ? sizeof(data_integrity_checksum) : 0));
+
+	if (rc) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, data_transfer_handle);
+	pldm_msgbuf_insert(buf, operation_id);
+	pldm_msgbuf_insert(buf, transfer_flag);
+	pldm_msgbuf_insert(buf, next_data_transfer_handle);
+	pldm_msgbuf_insert(buf, data_length_bytes);
+
+	rc = pldm_msgbuf_insert_array(buf, data_length_bytes,
+				      (const uint8_t *)data, data_length_bytes);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+	if (add_checksum) {
+		pldm_msgbuf_insert(buf, data_integrity_checksum);
+	}
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_rde_multipart_send_req(
+	const struct pldm_msg *msg, const uint32_t payload_len,
+	uint32_t *data_transfer_handle, uint16_t *operation_id,
+	uint8_t *rde_transfer_flag, uint32_t *next_data_transfer_handle,
+	uint32_t *data_length_bytes, uint8_t *data,
+	uint32_t *data_integrity_checksum, bool add_checksum)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || data_transfer_handle == NULL ||
+	    operation_id == NULL || rde_transfer_flag == NULL ||
+	    next_data_transfer_handle == NULL || data_length_bytes == NULL ||
+	    data == NULL || data_integrity_checksum == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(
+		buf, PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES, msg->payload,
+		payload_len +
+			(add_checksum ? sizeof(*data_integrity_checksum) : 0));
+
+	if (rc) {
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, data_transfer_handle);
+	pldm_msgbuf_extract_p(buf, operation_id);
+	pldm_msgbuf_extract_p(buf, rde_transfer_flag);
+	pldm_msgbuf_extract_p(buf, next_data_transfer_handle);
+	pldm_msgbuf_extract_p(buf, data_length_bytes);
+	rc = pldm_msgbuf_extract_array(buf, *data_length_bytes, data,
+				       *data_length_bytes);
+	if (rc) {
+		return pldm_msgbuf_discard(buf, rc);
+	}
+
+	if (add_checksum) {
+		pldm_msgbuf_extract_p(buf, data_integrity_checksum);
+	}
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int encode_rde_multipart_send_resp(uint8_t instance_id, uint8_t completion_code,
+				   uint8_t transfer_operation,
+				   size_t payload_length, struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (NULL == msg) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.msg_type = PLDM_RESPONSE;
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.command = PLDM_RDE_MULTIPART_SEND;
+
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_MULTIPART_SEND_RESP_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, completion_code);
+	if (completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	pldm_msgbuf_insert(buf, transfer_operation);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_rde_multipart_send_resp(const struct pldm_msg *msg,
+				   size_t payload_length,
+				   uint8_t *completion_code,
+				   uint8_t *transfer_operation)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || completion_code == NULL ||
+	    transfer_operation == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_MULTIPART_SEND_RESP_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, completion_code);
+	if (*completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	pldm_msgbuf_extract_p(buf, transfer_operation);
+
+	return pldm_msgbuf_complete(buf);
+}

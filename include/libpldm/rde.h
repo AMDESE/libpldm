@@ -26,6 +26,8 @@ extern "C" {
 #define PLDM_RDE_GET_RESOURCE_ETAG_RESP_FIXED_BYTES	    4 // Include NULL
 #define PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES		    15
 #define PLDM_RDE_MULTIPART_SEND_RESP_BYTES		    2
+#define PLDM_RDE_MULTIPART_RECEIVE_REQ_BYTES		    7
+#define PLDM_RDE_MULTIPART_RECEIVE_RESP_FIXED_BYTES	    10
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
@@ -34,6 +36,7 @@ enum pldm_rde_commands {
 	PLDM_GET_SCHEMA_URI = 0x04,
 	PLDM_GET_RESOURCE_ETAG = 0x05,
 	PLDM_RDE_MULTIPART_SEND = 0x30,
+	PLDM_RDE_MULTIPART_RECEIVE = 0x31,
 };
 
 enum pldm_rde_varstring_format {
@@ -50,6 +53,12 @@ enum pldm_rde_transfer_flag {
 	PLDM_RDE_MIDDLE = 1,
 	PLDM_RDE_END = 2,
 	PLDM_RDE_START_AND_END = 3,
+};
+
+enum pldm_rde_transfer_operation {
+	PLDM_RDE_XFER_FIRST_PART = 0,
+	PLDM_RDE_XFER_NEXT_PART = 1,
+	PLDM_RDE_XFER_ABORT = 2,
 };
 
 /**
@@ -539,6 +548,81 @@ int decode_rde_multipart_send_resp(const struct pldm_msg *msg,
 				   size_t payload_length,
 				   uint8_t *completion_code,
 				   uint8_t *transfer_operation);
+/**
+ * @brief Encode RDEMultipartReceive request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] data_transfer_handle - A handle to uniquely identify the chunk
+ * of data to be retrieved.
+ * @param[in] operation_id - Identification number for this operation.
+ * @param[in] transfer_operation - The portion of data requested for the
+ * transfer.
+ * @param[out] msg - Request will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_multipart_receive_req(uint8_t instance_id,
+				     uint32_t data_transfer_handle,
+				     uint16_t operation_id,
+				     uint8_t transfer_operation,
+				     struct pldm_msg *msg);
+
+/**
+ * @brief Decode RDEMultipartReceive request.
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_length - Length of request message payload.
+ * @param[out] data_transfer_handle - A handle to uniquely identify the
+ * chunk of data to be retrieved.
+ * @param[out] operation_id - Identification number for this operation.
+ * @param[out] transfer_operation - The portion of data requested for the
+ * transfer.
+ * @return pldm_completion_codes.
+ */
+int decode_rde_multipart_receive_req(const struct pldm_msg *msg,
+				     size_t payload_length,
+				     uint32_t *data_transfer_handle,
+				     uint16_t *operation_id,
+				     uint8_t *transfer_operation);
+/**
+ * @brief Encode RDEMultipartReceive response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] transfer_flag - The portion of data being sent to MC.
+ * @param[in] next_data_transfer_handle - A handle to uniquely identify the
+ * next chunk of data to be retrieved.
+ * @param[in] data_length_bytes - Length of the payload.
+ * @param[in] add_checksum - Indicate whether the payload needs to include
+ * the provided checksum.
+ * @param[in] data_integrity_checksum - Checksum.
+ * @param[in] data - Pointer to the data.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_multipart_receive_resp(
+	uint8_t instance_id, uint8_t completion_code, uint8_t transfer_flag,
+	uint32_t next_data_transfer_handle, uint32_t data_length_bytes,
+	bool add_checksum, uint32_t data_integrity_checksum,
+	const uint8_t *data, struct pldm_msg *msg);
+/**
+ * @brief Decode RDE Multipart Receive Response
+ *
+ * @param[in] msg - Response message
+ * @param[in] payload_length - Expected length of the response, since the
+ * response could be equal to the negotiated transfer chunk size, the
+ * requester should usually set it to the negotiated transfer size
+ * @param[out] completion_code - Pointer to Completion code
+ * @param[out] transfer_flag - Pointer to Transfer flag
+ * @param[out] transfer_operation - Pointer to Transfer operation
+ * @param[out] data_length_bytes - Pointer to the length of payload
+ * @param[out] data - Pointer to the payload
+ * @param[in] data_integrity_checksum - Pointer to checksum.
+ */
+int decode_rde_multipart_receive_resp(
+	const struct pldm_msg *msg, size_t payload_length,
+	uint8_t *completion_code, uint8_t *transfer_flag,
+	uint32_t *data_transfer_handle, uint32_t *data_length_bytes,
+	uint8_t *data, uint32_t *data_integrity_checksum);
 
 #ifdef __cplusplus
 }

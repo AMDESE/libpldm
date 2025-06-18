@@ -24,7 +24,6 @@ Change categories:
 
 ### Changed
 
-
 ### Deprecated
 
 - utils: Deprecate `is_time_legal()`

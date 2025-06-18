@@ -103,7 +103,7 @@ if get_option('tests')
                     '-new',
                     '@INPUT1@',
                 ],
-                build_by_default: true,
+                build_by_default: false,
             )
         endif
     endif

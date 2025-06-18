@@ -38,9 +38,15 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeRequestSuccess)
         requestMsg{};
     pldm_msg* request = (pldm_msg*)requestMsg.data();
 
+<<<<<<< RDEMultiPartRecv
     EXPECT_EQ(encode_rde_negotiate_redfish_parameters_req(
                   FIXED_INSTANCE_ID, mcConcurrencySupport, &mcFeatureSupport,
                   PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES, request),
+=======
+    EXPECT_EQ(encode_negotiate_redfish_parameters_req(
+                  FIXED_INSTANCE_ID, mcConcurrencySupport, &mcFeatureSupport,
+                  request),
+>>>>>>> integ_sp7
               PLDM_SUCCESS);
 
     checkHeader(request, PLDM_NEGOTIATE_REDFISH_PARAMETERS, PLDM_REQUEST);
@@ -48,10 +54,17 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeRequestSuccess)
     uint8_t decodedMcConcurrencySupport;
     bitfield16_t decodedMcFeatureSupport;
 
+<<<<<<< RDEMultiPartRecv
     EXPECT_EQ(decode_rde_negotiate_redfish_parameters_req(
                   request, PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES,
                   &decodedMcConcurrencySupport, &decodedMcFeatureSupport),
               PLDM_SUCCESS);
+=======
+    EXPECT_EQ(
+        decode_negotiate_redfish_parameters_req(
+            request, &decodedMcConcurrencySupport, &decodedMcFeatureSupport),
+        PLDM_SUCCESS);
+>>>>>>> integ_sp7
 
     EXPECT_EQ(decodedMcConcurrencySupport, mcConcurrencySupport);
     EXPECT_EQ(decodedMcFeatureSupport.value, mcFeatureSupport.value);
@@ -76,7 +89,11 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeResponseSuccess)
         responseMsg{};
     pldm_msg* response = (pldm_msg*)responseMsg.data();
 
+<<<<<<< RDEMultiPartRecv
     EXPECT_EQ(encode_rde_negotiate_redfish_parameters_resp(
+=======
+    EXPECT_EQ(encode_negotiate_redfish_parameters_resp(
+>>>>>>> integ_sp7
                   FIXED_INSTANCE_ID, completionCode, deviceConcurrencySupport,
                   &deviceCapabilitiesFlags, &deviceFeatureSupport,
                   deviceConfigurationSignature, device,
@@ -93,7 +110,11 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeResponseSuccess)
     uint32_t decodedDeviceConfigurationSignature;
     struct pldm_rde_varstring decodedProviderName;
 
+<<<<<<< RDEMultiPartRecv
     EXPECT_EQ(decode_rde_negotiate_redfish_parameters_resp(
+=======
+    EXPECT_EQ(decode_negotiate_redfish_parameters_resp(
+>>>>>>> integ_sp7
                   response, payloadLength, &decodedCompletionCode,
                   &decodedDeviceConcurrencySupport,
                   &decodedDeviceCapabilitiesFlags, &decodedDeviceFeatureSupport,
@@ -123,8 +144,12 @@ TEST(NegotiateMediumParametersTest, EncodeDecodeRequestSuccess)
     pldm_msg* request = (pldm_msg*)requestMsg.data();
 
     EXPECT_EQ(encode_negotiate_medium_parameters_req(
+<<<<<<< RDEMultiPartRecv
                   FIXED_INSTANCE_ID, mcMaximumTransferSize,
                   PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES, request),
+=======
+                  FIXED_INSTANCE_ID, mcMaximumTransferSize, request),
+>>>>>>> integ_sp7
               PLDM_SUCCESS);
 
     checkHeader(request, PLDM_NEGOTIATE_MEDIUM_PARAMETERS, PLDM_REQUEST);
@@ -132,8 +157,12 @@ TEST(NegotiateMediumParametersTest, EncodeDecodeRequestSuccess)
     uint32_t decodedMcMaximumTransferSize;
 
     EXPECT_EQ(decode_negotiate_medium_parameters_req(
+<<<<<<< RDEMultiPartRecv
                   request, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES,
                   &decodedMcMaximumTransferSize),
+=======
+                  request, &decodedMcMaximumTransferSize),
+>>>>>>> integ_sp7
               PLDM_SUCCESS);
 
     EXPECT_EQ(decodedMcMaximumTransferSize, mcMaximumTransferSize);
@@ -278,7 +307,6 @@ TEST(GetSchemaURITest, EncodeDecodeResponseSuccess)
         varstrings[i].string_length_bytes =
             schemaURI[i].size() + 1; // Include null terminator
         varstrings[i].string_data = const_cast<char*>(schemaURI[i].c_str());
-
         payloadLength +=
             PLDM_RDE_VARSTRING_HEADER_SIZE + varstrings[i].string_length_bytes;
     }
@@ -289,7 +317,7 @@ TEST(GetSchemaURITest, EncodeDecodeResponseSuccess)
 
     EXPECT_EQ(encode_get_schema_uri_resp(FIXED_INSTANCE_ID, completionCode,
                                          stringFragmentCount, varstrings.data(),
-                                         payloadLength, responsePtr),
+                                         responsePtr),
               PLDM_SUCCESS);
     checkHeader(responsePtr, PLDM_GET_SCHEMA_URI, PLDM_RESPONSE);
 
@@ -373,138 +401,6 @@ TEST(GetResourceEtagTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(strncmp(etag_string_data, decodedEtag.string_data,
                       strlen(etag_string_data)),
               0);
-}
-
-TEST(RDEMultipartSendTest, EncodeDecodeRequestSuccess)
-{
-    uint32_t dataTransferHandle = 1;
-    uint16_t operationId = 1;
-    uint8_t transferFlag = PLDM_RDE_MIDDLE;
-    uint32_t nextDataTransferHandle = 1;
-    const uint32_t dataLengthBytes = 8;
-    uint32_t dataIntegrityChecksum = 0x10;
-    bool addChecksum = false;
-    const uint32_t payloadLen =
-        PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES + dataLengthBytes;
-    std::array<uint8_t, dataLengthBytes> data = {0x01, 0x02, 0x03, 0x04,
-                                                 0x05, 0x06, 0x07, 0x08};
-
-    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
-    pldm_msg* request = (pldm_msg*)requestMsg.data();
-
-    EXPECT_EQ(encode_rde_multipart_send_req(
-                  FIXED_INSTANCE_ID, dataTransferHandle, operationId,
-                  transferFlag, nextDataTransferHandle, dataLengthBytes,
-                  data.data(), dataIntegrityChecksum, addChecksum, request),
-              PLDM_SUCCESS);
-
-    checkHeader(request, PLDM_RDE_MULTIPART_SEND, PLDM_REQUEST);
-
-    uint32_t decodeDataTransferHandle;
-    uint16_t decodeOperationId;
-    uint8_t decodeTransferFlag;
-    uint32_t decodeNextDataTransferHandle;
-    uint32_t decodeDataLengthBytes;
-    uint32_t decodeDataIntegrityChecksum = 0;
-
-    std::array<uint8_t, dataLengthBytes> decodeData = {0};
-
-    EXPECT_EQ(decode_rde_multipart_send_req(
-                  request, payloadLen, &decodeDataTransferHandle,
-                  &decodeOperationId, &decodeTransferFlag,
-                  &decodeNextDataTransferHandle, &decodeDataLengthBytes,
-                  decodeData.data(), &decodeDataIntegrityChecksum, addChecksum),
-              PLDM_SUCCESS);
-
-    EXPECT_EQ(decodeDataTransferHandle, dataTransferHandle);
-    EXPECT_EQ(decodeOperationId, operationId);
-    EXPECT_EQ(decodeTransferFlag, transferFlag);
-    EXPECT_EQ(decodeNextDataTransferHandle, nextDataTransferHandle);
-    EXPECT_EQ(decodeDataLengthBytes, dataLengthBytes);
-    EXPECT_EQ(decodeData, data);
-}
-
-TEST(RDEMultipartSendTest, EncodeDecodeRequestWithChecksumSuccess)
-{
-    uint32_t dataTransferHandle = 1;
-    uint16_t operationId = 1;
-    uint8_t transferFlag = PLDM_RDE_END;
-    uint32_t nextDataTransferHandle = 1;
-    const uint32_t dataLengthBytes = 8;
-    uint32_t dataIntegrityChecksum = 0x10;
-    bool addChecksum = true;
-    const uint32_t payloadLen =
-        PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES + dataLengthBytes;
-    std::array<uint8_t, dataLengthBytes> data = {0x01, 0x02, 0x03, 0x04,
-                                                 0x05, 0x06, 0x07, 0x08};
-
-    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen +
-                            sizeof(dataIntegrityChecksum)>
-        requestMsg{};
-    pldm_msg* request = (pldm_msg*)requestMsg.data();
-
-    EXPECT_EQ(encode_rde_multipart_send_req(
-                  FIXED_INSTANCE_ID, dataTransferHandle, operationId,
-                  transferFlag, nextDataTransferHandle, dataLengthBytes,
-                  data.data(), dataIntegrityChecksum, addChecksum, request),
-              PLDM_SUCCESS);
-
-    checkHeader(request, PLDM_RDE_MULTIPART_SEND, PLDM_REQUEST);
-
-    uint32_t decodeDataTransferHandle;
-    uint16_t decodeOperationId;
-    uint8_t decodeTransferFlag;
-    uint32_t decodeNextDataTransferHandle;
-    uint32_t decodeDataLengthBytes;
-    uint32_t decodeDataIntegrityChecksum = 0;
-
-    std::array<uint8_t, dataLengthBytes> decodeData = {0};
-
-    EXPECT_EQ(decode_rde_multipart_send_req(
-                  request, payloadLen, &decodeDataTransferHandle,
-                  &decodeOperationId, &decodeTransferFlag,
-                  &decodeNextDataTransferHandle, &decodeDataLengthBytes,
-                  decodeData.data(), &decodeDataIntegrityChecksum, addChecksum),
-              PLDM_SUCCESS);
-
-    EXPECT_EQ(decodeDataTransferHandle, dataTransferHandle);
-    EXPECT_EQ(decodeOperationId, operationId);
-    EXPECT_EQ(decodeTransferFlag, transferFlag);
-    EXPECT_EQ(decodeNextDataTransferHandle, nextDataTransferHandle);
-    EXPECT_EQ(decodeDataLengthBytes, dataLengthBytes);
-    EXPECT_EQ(decodeData, data);
-    EXPECT_EQ(decodeDataIntegrityChecksum, dataIntegrityChecksum);
-}
-
-TEST(RDEMultipartSendTest, EncodeDecodeResponseSuccess)
-{
-    uint8_t completionCode = 0;
-    uint8_t transferOperation = 1;
-
-    constexpr size_t payloadLength = PLDM_RDE_MULTIPART_SEND_RESP_BYTES;
-
-    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLength>
-        responseMsg{};
-    pldm_msg* response = (pldm_msg*)responseMsg.data();
-
-    EXPECT_EQ(encode_rde_multipart_send_resp(FIXED_INSTANCE_ID, completionCode,
-                                             transferOperation, payloadLength,
-                                             response),
-              PLDM_SUCCESS);
-
-    checkHeader(response, PLDM_RDE_MULTIPART_SEND, PLDM_RESPONSE);
-
-    // verify payload.
-    uint8_t decodedCompletionCode;
-    uint8_t decodedtransferOperation;
-
-    EXPECT_EQ(decode_rde_multipart_send_resp(response, payloadLength,
-                                             &decodedCompletionCode,
-                                             &decodedtransferOperation),
-              PLDM_SUCCESS);
-
-    EXPECT_EQ(decodedCompletionCode, completionCode);
-    EXPECT_EQ(decodedtransferOperation, transferOperation);
 }
 
 TEST(RDEMultipartReceiveTest, EncodeDecodeRequestSuccess)

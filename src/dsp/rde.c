@@ -9,10 +9,10 @@
 #include <string.h>
 
 LIBPLDM_ABI_STABLE
-int encode_rde_negotiate_redfish_parameters_req(
-	uint8_t instance_id, uint8_t mc_concurrency_support,
-	bitfield16_t *mc_feature_support, size_t payload_length,
-	struct pldm_msg *msg)
+int encode_negotiate_redfish_parameters_req(uint8_t instance_id,
+					    uint8_t mc_concurrency_support,
+					    bitfield16_t *mc_feature_support,
+					    struct pldm_msg *msg)
 {
 	PLDM_MSGBUF_DEFINE_P(buf);
 	int rc;
@@ -34,7 +34,7 @@ int encode_rde_negotiate_redfish_parameters_req(
 
 	rc = pldm_msgbuf_init_errno(
 		buf, PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES,
-		msg->payload, payload_length);
+		msg->payload, PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES);
 	if (rc) {
 		return rc;
 	}
@@ -46,9 +46,9 @@ int encode_rde_negotiate_redfish_parameters_req(
 }
 
 LIBPLDM_ABI_STABLE
-int decode_rde_negotiate_redfish_parameters_req(
-	const struct pldm_msg *msg, size_t payload_length,
-	uint8_t *mc_concurrency_support, bitfield16_t *mc_feature_support)
+int decode_negotiate_redfish_parameters_req(const struct pldm_msg *msg,
+					    uint8_t *mc_concurrency_support,
+					    bitfield16_t *mc_feature_support)
 {
 	PLDM_MSGBUF_DEFINE_P(buf);
 	int rc;
@@ -60,7 +60,7 @@ int decode_rde_negotiate_redfish_parameters_req(
 
 	rc = pldm_msgbuf_init_errno(
 		buf, PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES,
-		msg->payload, payload_length);
+		msg->payload, PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES);
 
 	if (rc) {
 		return rc;
@@ -78,7 +78,7 @@ int decode_rde_negotiate_redfish_parameters_req(
 	return pldm_msgbuf_complete(buf);
 }
 LIBPLDM_ABI_STABLE
-int encode_rde_negotiate_redfish_parameters_resp(
+int encode_negotiate_redfish_parameters_resp(
 	uint8_t instance_id, uint8_t completion_code,
 	uint8_t device_concurrency_support,
 	bitfield8_t *device_capabilities_flags,
@@ -143,7 +143,7 @@ int encode_rde_negotiate_redfish_parameters_resp(
 }
 
 LIBPLDM_ABI_STABLE
-int decode_rde_negotiate_redfish_parameters_resp(
+int decode_negotiate_redfish_parameters_resp(
 	const struct pldm_msg *msg, size_t payload_length,
 	uint8_t *completion_code, uint8_t *device_concurrency_support,
 	bitfield8_t *device_capabilities_flags,
@@ -191,7 +191,6 @@ int decode_rde_negotiate_redfish_parameters_resp(
 LIBPLDM_ABI_STABLE
 int encode_negotiate_medium_parameters_req(uint8_t instance_id,
 					   uint32_t mc_max_transfer_size,
-					   size_t payload_length,
 					   struct pldm_msg *msg)
 {
 	PLDM_MSGBUF_DEFINE_P(buf);
@@ -213,7 +212,7 @@ int encode_negotiate_medium_parameters_req(uint8_t instance_id,
 
 	rc = pldm_msgbuf_init_errno(
 		buf, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES,
-		msg->payload, payload_length);
+		msg->payload, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES);
 	if (rc != PLDM_SUCCESS) {
 		fprintf(stderr, "init failed\n");
 		return rc;
@@ -226,7 +225,6 @@ int encode_negotiate_medium_parameters_req(uint8_t instance_id,
 
 LIBPLDM_ABI_STABLE
 int decode_negotiate_medium_parameters_req(const struct pldm_msg *msg,
-					   size_t payload_length,
 					   uint32_t *mc_max_transfer_size)
 {
 	PLDM_MSGBUF_DEFINE_P(buf);
@@ -238,7 +236,7 @@ int decode_negotiate_medium_parameters_req(const struct pldm_msg *msg,
 
 	rc = pldm_msgbuf_init_errno(
 		buf, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES,
-		msg->payload, payload_length);
+		msg->payload, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES);
 	if (rc != PLDM_SUCCESS) {
 		fprintf(stderr, "init failed\n");
 		return rc;
@@ -542,7 +540,7 @@ LIBPLDM_ABI_STABLE
 int encode_get_schema_uri_resp(uint8_t instance_id, uint8_t completion_code,
 			       uint8_t string_fragment_count,
 			       const struct pldm_rde_varstring *schema_uri,
-			       size_t payload_length, struct pldm_msg *msg)
+			       struct pldm_msg *msg)
 {
 	PLDM_MSGBUF_DEFINE_P(buf);
 	int rc;
@@ -561,6 +559,12 @@ int encode_get_schema_uri_resp(uint8_t instance_id, uint8_t completion_code,
 	rc = pack_pldm_header(&header, &(msg->hdr));
 	if (rc != PLDM_SUCCESS) {
 		return rc;
+	}
+
+	size_t payload_length = PLDM_RDE_SCHEMA_URI_RESP_FIXED_BYTES;
+	for (int i = 0; i < string_fragment_count; ++i) {
+		payload_length += PLDM_RDE_VARSTRING_HEADER_SIZE +
+				  schema_uri[i].string_length_bytes;
 	}
 
 	rc = pldm_msgbuf_init_errno(buf, payload_length, msg->payload,

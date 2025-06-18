@@ -38,9 +38,9 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeRequestSuccess)
         requestMsg{};
     pldm_msg* request = (pldm_msg*)requestMsg.data();
 
-    EXPECT_EQ(encode_rde_negotiate_redfish_parameters_req(
+    EXPECT_EQ(encode_negotiate_redfish_parameters_req(
                   FIXED_INSTANCE_ID, mcConcurrencySupport, &mcFeatureSupport,
-                  PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES, request),
+                  request),
               PLDM_SUCCESS);
 
     checkHeader(request, PLDM_NEGOTIATE_REDFISH_PARAMETERS, PLDM_REQUEST);
@@ -48,10 +48,10 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeRequestSuccess)
     uint8_t decodedMcConcurrencySupport;
     bitfield16_t decodedMcFeatureSupport;
 
-    EXPECT_EQ(decode_rde_negotiate_redfish_parameters_req(
-                  request, PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_REQ_BYTES,
-                  &decodedMcConcurrencySupport, &decodedMcFeatureSupport),
-              PLDM_SUCCESS);
+    EXPECT_EQ(
+        decode_negotiate_redfish_parameters_req(
+            request, &decodedMcConcurrencySupport, &decodedMcFeatureSupport),
+        PLDM_SUCCESS);
 
     EXPECT_EQ(decodedMcConcurrencySupport, mcConcurrencySupport);
     EXPECT_EQ(decodedMcFeatureSupport.value, mcFeatureSupport.value);
@@ -76,7 +76,7 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeResponseSuccess)
         responseMsg{};
     pldm_msg* response = (pldm_msg*)responseMsg.data();
 
-    EXPECT_EQ(encode_rde_negotiate_redfish_parameters_resp(
+    EXPECT_EQ(encode_negotiate_redfish_parameters_resp(
                   FIXED_INSTANCE_ID, completionCode, deviceConcurrencySupport,
                   &deviceCapabilitiesFlags, &deviceFeatureSupport,
                   deviceConfigurationSignature, device,
@@ -93,7 +93,7 @@ TEST(NegotiateRedfishParametersTest, EncodeDecodeResponseSuccess)
     uint32_t decodedDeviceConfigurationSignature;
     struct pldm_rde_varstring decodedProviderName;
 
-    EXPECT_EQ(decode_rde_negotiate_redfish_parameters_resp(
+    EXPECT_EQ(decode_negotiate_redfish_parameters_resp(
                   response, payloadLength, &decodedCompletionCode,
                   &decodedDeviceConcurrencySupport,
                   &decodedDeviceCapabilitiesFlags, &decodedDeviceFeatureSupport,
@@ -123,8 +123,7 @@ TEST(NegotiateMediumParametersTest, EncodeDecodeRequestSuccess)
     pldm_msg* request = (pldm_msg*)requestMsg.data();
 
     EXPECT_EQ(encode_negotiate_medium_parameters_req(
-                  FIXED_INSTANCE_ID, mcMaximumTransferSize,
-                  PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES, request),
+                  FIXED_INSTANCE_ID, mcMaximumTransferSize, request),
               PLDM_SUCCESS);
 
     checkHeader(request, PLDM_NEGOTIATE_MEDIUM_PARAMETERS, PLDM_REQUEST);
@@ -132,8 +131,7 @@ TEST(NegotiateMediumParametersTest, EncodeDecodeRequestSuccess)
     uint32_t decodedMcMaximumTransferSize;
 
     EXPECT_EQ(decode_negotiate_medium_parameters_req(
-                  request, PLDM_RDE_NEGOTIATE_MEDIUM_PARAMETERS_REQ_BYTES,
-                  &decodedMcMaximumTransferSize),
+                  request, &decodedMcMaximumTransferSize),
               PLDM_SUCCESS);
 
     EXPECT_EQ(decodedMcMaximumTransferSize, mcMaximumTransferSize);
@@ -278,7 +276,6 @@ TEST(GetSchemaURITest, EncodeDecodeResponseSuccess)
         varstrings[i].string_length_bytes =
             schemaURI[i].size() + 1; // Include null terminator
         varstrings[i].string_data = const_cast<char*>(schemaURI[i].c_str());
-
         payloadLength +=
             PLDM_RDE_VARSTRING_HEADER_SIZE + varstrings[i].string_length_bytes;
     }
@@ -289,7 +286,7 @@ TEST(GetSchemaURITest, EncodeDecodeResponseSuccess)
 
     EXPECT_EQ(encode_get_schema_uri_resp(FIXED_INSTANCE_ID, completionCode,
                                          stringFragmentCount, varstrings.data(),
-                                         payloadLength, responsePtr),
+                                         responsePtr),
               PLDM_SUCCESS);
     checkHeader(responsePtr, PLDM_GET_SCHEMA_URI, PLDM_RESPONSE);
 

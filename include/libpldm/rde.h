@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 #include <libpldm/base.h>
+
 #include <libpldm/utils.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,6 +25,7 @@ extern "C" {
 #define PLDM_RDE_SCHEMA_URI_RESP_MAX_VAR_BYTES		    500
 #define PLDM_RDE_GET_RESOURCE_ETAG_REQ_BYTES		    4
 #define PLDM_RDE_GET_RESOURCE_ETAG_RESP_FIXED_BYTES	    4 // Include NULL
+
 #define PLDM_RDE_MULTIPART_SEND_REQ_FIXED_BYTES		    15
 #define PLDM_RDE_MULTIPART_SEND_RESP_BYTES		    2
 
@@ -131,27 +133,25 @@ enum pldm_rde_completion_codes {
  * @param[in] instance_id - Message's instance id.
  * @param[in] mc_concurrency_support - MC concurrency support.
  * @param[in] mc_feature_support - MC feature support flags.
- * @param[in] payload_length - Length of the encoded payload segment.
  * @param[out] msg - Request message.
  * @return pldm_completion_codes.
  */
-int encode_rde_negotiate_redfish_parameters_req(
-	uint8_t instance_id, uint8_t mc_concurrency_support,
-	bitfield16_t *mc_feature_support, size_t payload_length,
-	struct pldm_msg *msg);
+int encode_negotiate_redfish_parameters_req(uint8_t instance_id,
+					    uint8_t mc_concurrency_support,
+					    bitfield16_t *mc_feature_support,
+					    struct pldm_msg *msg);
 
 /**
  * @brief Decode NegotiateRedfishParameters request.
  *
  * @param[in] msg - Request message.
- * @param[in] payload_length - Length of request message payload.
  * @param[out] mc_concurrency_support - Pointer to a uint8_t variable.
  * @param[out] mc_feature_support - Pointer to a bitfield16_t variable.
  * @return pldm_completion_codes.
  */
-int decode_rde_negotiate_redfish_parameters_req(
-	const struct pldm_msg *msg, size_t payload_length,
-	uint8_t *mc_concurrency_support, bitfield16_t *mc_feature_support);
+int decode_negotiate_redfish_parameters_req(const struct pldm_msg *msg,
+					    uint8_t *mc_concurrency_support,
+					    bitfield16_t *mc_feature_support);
 
 /**
  * @brief Encode NegotiateRedfishParameters response
@@ -168,7 +168,7 @@ int decode_rde_negotiate_redfish_parameters_req(
  * @param[out] msg - Response message will be written to this.
  * @return pldm_completion_codes.
  */
-int encode_rde_negotiate_redfish_parameters_resp(
+int encode_negotiate_redfish_parameters_resp(
 	uint8_t instance_id, uint8_t completion_code,
 	uint8_t device_concurrency_support,
 	bitfield8_t *device_capabilities_flags,
@@ -193,7 +193,7 @@ int encode_rde_negotiate_redfish_parameters_resp(
  * buffer.
  * @return pldm_completion_codes
  */
-int decode_rde_negotiate_redfish_parameters_resp(
+int decode_negotiate_redfish_parameters_resp(
 	const struct pldm_msg *msg, size_t payload_length,
 	uint8_t *completion_code, uint8_t *device_concurrency_support,
 	bitfield8_t *device_capabilities_flags,
@@ -207,25 +207,21 @@ int decode_rde_negotiate_redfish_parameters_resp(
  * @param[in] instance_id - Message's instance id.
  * @param[in] mc_max_transfer_size - Maximum amount of data the MC can
  * support for a single message transfer.
- * @param[in] payload_length - Length of the encoded payload segment.
  * @param[out] msg - Request message.
  * @return pldm_completion_codes.
  */
 int encode_negotiate_medium_parameters_req(uint8_t instance_id,
 					   uint32_t mc_max_transfer_size,
-					   size_t payload_length,
 					   struct pldm_msg *msg);
 
 /**
  * @brief Decode NegotiateMediumParameters request.
  *
  * @param[in] msg - Request message.
- * @param[in] payload_length - Length of request message payload.
  * @param[out] mc_max_transfer_size - Pointer to a uint32_t variable.
  * @return pldm_completion_codes.
  */
 int decode_negotiate_medium_parameters_req(const struct pldm_msg *msg,
-					   size_t payload_length,
 					   uint32_t *mc_max_transfer_size);
 
 /**
@@ -370,7 +366,7 @@ int decode_get_schema_uri_req(const struct pldm_msg *msg, uint32_t *resource_id,
 int encode_get_schema_uri_resp(uint8_t instance_id, uint8_t completion_code,
 			       uint8_t string_fragment_count,
 			       const struct pldm_rde_varstring *schema_uri,
-			       size_t payload_length, struct pldm_msg *msg);
+			       struct pldm_msg *msg);
 
 /**
  * @brief Decode GetSchemaURI response.
@@ -379,6 +375,7 @@ int encode_get_schema_uri_resp(uint8_t instance_id, uint8_t completion_code,
  * reconstructs the full schema URI from the fragments into a caller-provided
  * buffer.
  *
+ * TODO: Need to revisit this memory allocation strategy
  * The caller must allocate a buffer large enough to hold the reconstructed
  * URI, including the null terminator. The buffer should be cast to a
  * `struct pldm_rde_varstring *` and passed to this function.
@@ -461,7 +458,6 @@ int encode_get_resource_etag_resp(uint8_t instance_id, uint8_t completion_code,
  * (otherwise). It is recommended that the MC delay for an integer multiple
  * of PT1 between retry attempts.
  */
-
 int decode_get_resource_etag_resp(const struct pldm_msg *msg,
 				  size_t payload_length,
 				  uint8_t *completion_code,

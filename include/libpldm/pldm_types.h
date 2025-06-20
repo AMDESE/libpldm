@@ -18,6 +18,9 @@ typedef union {
 	} __attribute__((packed)) bits;
 } bitfield8_t;
 
+// Define rdeOpID as a 16-bit unsigned integer
+typedef uint16_t rde_op_id;
+
 /** @struct pldm_version
  *
  *

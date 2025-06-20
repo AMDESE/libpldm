@@ -93,6 +93,7 @@ Change categories:
 - rde: Add GetSchemaDictionary support
 - rde: Add GetSchemaURI support
 - rde: Add GetResourceETag support
+- rde: Add RDEMultipartSend support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

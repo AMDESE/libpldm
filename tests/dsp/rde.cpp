@@ -502,3 +502,129 @@ TEST(RDEMultipartSendTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(decodedtransferOperation, transferOperation);
 }
 
+TEST(RDEMultipartReceiveTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t dataTransferHandle = 1;
+    rde_op_id operationID = 1;
+    uint8_t transferOperation = 1;
+
+    constexpr size_t payloadLength = PLDM_RDE_MULTIPART_RECEIVE_REQ_BYTES;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLength>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_rde_multipart_receive_req(FIXED_INSTANCE_ID,
+                                               dataTransferHandle, operationID,
+                                               transferOperation, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_RDE_MULTIPART_RECEIVE, PLDM_REQUEST);
+
+    // verify payload.
+    uint32_t decodeDataTransferHandle = 1;
+    rde_op_id decodeOperationID = 1;
+    uint8_t decodeTransferOperation = 1;
+
+    EXPECT_EQ(decode_rde_multipart_receive_req(
+                  response, payloadLength, &decodeDataTransferHandle,
+                  &decodeOperationID, &decodeTransferOperation),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodeDataTransferHandle, dataTransferHandle);
+    EXPECT_EQ(decodeOperationID, operationID);
+    EXPECT_EQ(decodeTransferOperation, transferOperation);
+}
+
+TEST(RDEMultipartReceiveTest, EncodeDecodeResoponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint8_t transferFlag = PLDM_RDE_MIDDLE;
+    uint32_t nextDataTransferHandle = 1;
+    const uint32_t dataLengthBytes = 8;
+    uint32_t dataIntegrityChecksum = 0x10;
+    const uint32_t payloadLen =
+        PLDM_RDE_MULTIPART_RECEIVE_RESP_FIXED_BYTES + dataLengthBytes;
+    std::array<uint8_t, dataLengthBytes> data = {0x01, 0x02, 0x03, 0x04,
+                                                 0x05, 0x06, 0x07, 0x08};
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_multipart_receive_resp(
+                  FIXED_INSTANCE_ID, completionCode, transferFlag,
+                  nextDataTransferHandle, dataLengthBytes, data.data(),
+                  dataIntegrityChecksum, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_RDE_MULTIPART_RECEIVE, PLDM_RESPONSE);
+
+    uint8_t decodeCompletionCode;
+    uint8_t decodeTransferFlag;
+    uint32_t decodeNextDataTransferHandle;
+    uint32_t decodeDataLengthBytes;
+    uint32_t decodeDataIntegrityChecksum = 0;
+
+    std::array<uint8_t, dataLengthBytes> decodeData = {0};
+
+    EXPECT_EQ(decode_rde_multipart_receive_resp(
+                  request, payloadLen, &decodeCompletionCode,
+                  &decodeTransferFlag, &decodeNextDataTransferHandle,
+                  &decodeDataLengthBytes, decodeData.data(),
+                  &decodeDataIntegrityChecksum),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodeCompletionCode, completionCode);
+    EXPECT_EQ(decodeTransferFlag, transferFlag);
+    EXPECT_EQ(decodeNextDataTransferHandle, nextDataTransferHandle);
+    EXPECT_EQ(decodeDataLengthBytes, dataLengthBytes);
+    EXPECT_EQ(decodeData, data);
+}
+
+TEST(RDEMultipartReceiveTest, EncodeDecodeResoponseWithChecksumSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint8_t transferFlag = PLDM_RDE_END;
+    uint32_t nextDataTransferHandle = 1;
+    const uint32_t dataLengthBytes = 8;
+    uint32_t dataIntegrityChecksum = 0x10;
+    const uint32_t payloadLen = PLDM_RDE_MULTIPART_RECEIVE_RESP_FIXED_BYTES +
+                                dataLengthBytes + sizeof(dataIntegrityChecksum);
+    std::array<uint8_t, dataLengthBytes> data = {0x01, 0x02, 0x03, 0x04,
+                                                 0x05, 0x06, 0x07, 0x08};
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+    uint32_t dataBytes = dataLengthBytes + sizeof(dataIntegrityChecksum);
+
+    EXPECT_EQ(encode_rde_multipart_receive_resp(
+                  FIXED_INSTANCE_ID, completionCode, transferFlag,
+                  nextDataTransferHandle, dataBytes, data.data(),
+                  dataIntegrityChecksum, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_RDE_MULTIPART_RECEIVE, PLDM_RESPONSE);
+
+    uint8_t decodeCompletionCode;
+    uint8_t decodeTransferFlag;
+    uint32_t decodeNextDataTransferHandle;
+    uint32_t decodeDataBytes;
+    uint32_t decodeDataIntegrityChecksum = 0;
+
+    std::array<uint8_t, dataLengthBytes> decodeData = {0};
+
+    EXPECT_EQ(decode_rde_multipart_receive_resp(
+                  request, payloadLen, &decodeCompletionCode,
+                  &decodeTransferFlag, &decodeNextDataTransferHandle,
+                  &decodeDataBytes, decodeData.data(),
+                  &decodeDataIntegrityChecksum),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodeCompletionCode, completionCode);
+    EXPECT_EQ(decodeTransferFlag, transferFlag);
+    EXPECT_EQ(decodeNextDataTransferHandle, nextDataTransferHandle);
+    EXPECT_EQ(decodeDataBytes, dataBytes);
+    EXPECT_EQ(decodeData, data);
+    EXPECT_EQ(decodeDataIntegrityChecksum, dataIntegrityChecksum);
+}
+

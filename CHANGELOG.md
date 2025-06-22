@@ -96,6 +96,7 @@ Change categories:
 - rde: Add RDEMultipartSend support
 - rde: Add RDEMultipartReceive support
 - rde: Add RDEOperationComplete support
+- rde: Add RDEOperationStatus support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

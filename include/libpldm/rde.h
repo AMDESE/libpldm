@@ -30,6 +30,8 @@ extern "C" {
 #define PLDM_RDE_MULTIPART_RECEIVE_RESP_FIXED_BYTES	    10
 #define PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES		    6
 #define PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES		    1
+#define PLDM_RDE_OPERATION_STATUS_REQ_BYTES		    6
+#define PLDM_RDE_OPERATION_STATUS_RESP_FIXED_BYTES	    17
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
@@ -38,6 +40,7 @@ enum pldm_rde_commands {
 	PLDM_GET_SCHEMA_URI = 0x04,
 	PLDM_GET_RESOURCE_ETAG = 0x05,
 	PLDM_RDE_OPERATION_COMPLETE = 0x13,
+	PLDM_RDE_OPERATION_STATUS = 0x14,
 	PLDM_RDE_MULTIPART_SEND = 0x30,
 	PLDM_RDE_MULTIPART_RECEIVE = 0x31,
 };
@@ -678,6 +681,86 @@ int encode_rde_operation_complete_resp(uint8_t instance_id,
 int decode_rde_operation_complete_resp(const struct pldm_msg *msg,
 				       uint32_t payload_length,
 				       uint8_t *completion_code);
+
+/**
+ * @brief Encode RDEOperationStatus request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] resource_id - The ResourceID.
+ * @param[in] operation_id - Identification number for this operation.
+ * @param[out] msg - Request will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_operation_status_req(uint8_t instance_id, uint32_t resource_id,
+				    rde_op_id operation_id,
+				    struct pldm_msg *msg);
+/**
+ * @brief Decode RDEOperationStatus request.
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_length - Length of request message payload.
+ * @param[out] resource_id - The ResourceID.
+ * @param[out] operation_id - Identification number for this operation.
+ * @return pldm_completion_codes.
+ */
+int decode_rde_operation_status_req(const struct pldm_msg *msg,
+				    uint32_t payload_length,
+				    uint32_t *resource_id,
+				    rde_op_id *operation_id);
+/**
+ * @brief Encode RDEOperationStatus response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] operation_status - Status of the operation.
+ * @param[in] completion_percentage - Percentage complete.
+ * @param[in] completion_time_seconds - An estimate of the number of seconds
+ * remaining before the Operation is completed.
+ * @param[in] operation_execution_flags - Explains the result of operation.
+ * @param[in] result_transfer_handle - A data transfer handle that the MC
+ * may use to retrieve a larger response payload.
+ * @param[in] permission_flags - Indicates the access level granted to the
+ * resource targeted by the Operation.
+ * @param[in] response_payload_length - Length of the response payload.
+ * @param[in] etag - ETag.
+ * @param[in] response_payload - The response payload if the payload fits.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_operation_status_resp(
+	uint8_t instance_id, uint8_t completion_code, uint8_t operation_status,
+	uint8_t completion_percentage, uint32_t completion_time_seconds,
+	bitfield8_t *operation_execution_flags, uint32_t result_transfer_handle,
+	bitfield8_t *permission_flags, uint32_t response_payload_length,
+	const char *etag, const uint8_t *response_payload,
+	struct pldm_msg *msg);
+
+/**
+ * @brief Decode RDEOperationStatus Resp
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_len - Request message lenght.
+ * @param[out] completion_code - Pointer to completion Code
+ * @param[in] completion_percentage - Pointer to percentage complete.
+ * @param[in] operation_status - Pointer to status of the operation.
+ * @param[in] completion_percentage - Pointer to percentage complete.
+ * @param[in] completion_time_seconds - Pointer to completion_time_seconds
+ * @param[in] operation_execution_flags - Pointer to operation_execution_flags.
+ * @param[in] result_transfer_handle - Pointer to result_transfer_handle
+ * @param[in] permission_flags - Pointer to permission_flags
+ * @param[in] response_payload_length - Pointer to response_payload_length.
+ * @param[in] etag - Pointer to ETag.
+ * @param[in] response_payload - The response payload if the payload fits.
+  * @return pldm_completion_codes.
+ */
+int decode_rde_operation_status_resp(
+	const struct pldm_msg *msg, size_t payload_length,
+	uint8_t *completion_code, uint8_t *operation_status,
+	uint8_t *completion_percentage, uint32_t *completion_time_seconds,
+	bitfield8_t *operation_execution_flags,
+	uint32_t *result_transfer_handle, bitfield8_t *permission_flags,
+	uint32_t *response_payload_length, struct pldm_rde_varstring *etag,
+	uint8_t *response_payload);
 
 #ifdef __cplusplus
 }

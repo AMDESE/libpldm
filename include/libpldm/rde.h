@@ -32,6 +32,7 @@ extern "C" {
 #define PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES		    1
 #define PLDM_RDE_OPERATION_STATUS_REQ_BYTES		    6
 #define PLDM_RDE_OPERATION_STATUS_RESP_FIXED_BYTES	    17
+#define PLDM_RDE_OPERATION_ENUMERATE_RESP_FIXED_BYTES	    3
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
@@ -41,6 +42,7 @@ enum pldm_rde_commands {
 	PLDM_GET_RESOURCE_ETAG = 0x05,
 	PLDM_RDE_OPERATION_COMPLETE = 0x13,
 	PLDM_RDE_OPERATION_STATUS = 0x14,
+	PLDM_RDE_OPERATION_ENUMERATE = 0x16,
 	PLDM_RDE_MULTIPART_SEND = 0x30,
 	PLDM_RDE_MULTIPART_RECEIVE = 0x31,
 };
@@ -65,6 +67,32 @@ enum pldm_rde_transfer_operation {
 	PLDM_RDE_XFER_FIRST_PART = 0,
 	PLDM_RDE_XFER_NEXT_PART = 1,
 	PLDM_RDE_XFER_ABORT = 2,
+};
+
+enum pldm_rde_operation_types {
+	PLDM_RDE_OPERATION_HEAD = 0,
+	PLDM_RDE_OPERATION_READ = 1,
+	PLDM_RDE_OPERATION_CREATE = 2,
+	PLDM_RDE_OPERATION_DELETE = 3,
+	PLDM_RDE_OPERATION_UPDATE = 4,
+	PLDM_RDE_OPERATION_REPLACE = 5,
+	PLDM_RDE_OPERATION_ACTION = 6,
+};
+enum pldm_rde_operation_status {
+	PLDM_RDE_OPERATION_INACTIVE = 0,
+	PLDM_RDE_OPERATION_NEEDS_INPUT = 1,
+	PLDM_RDE_OPERATION_TRIGGERED = 2,
+	PLDM_RDE_OPERATION_RUNNING = 3,
+	PLDM_RDE_OPERATION_HAVE_RESULTS = 4,
+	PLDM_RDE_OPERATION_COMPLETED = 5,
+	PLDM_RDE_OPERATION_FAILED = 6,
+	PLDM_RDE_OPERATION_ABANDONED = 7,
+};
+
+struct pldm_rde_op_entry {
+	uint32_t resource_id;
+	rde_op_id operation_id;
+	uint8_t operation_type;
 };
 
 /**
@@ -761,6 +789,53 @@ int decode_rde_operation_status_resp(
 	uint32_t *result_transfer_handle, bitfield8_t *permission_flags,
 	uint32_t *response_payload_length, struct pldm_rde_varstring *etag,
 	uint8_t *response_payload);
+
+/**
+ * @brief Encode RDEOperationEnumerate request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[out] msg - Request will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_operation_enumerate_req(uint8_t instance_id,
+				       struct pldm_msg *msg);
+/**
+ * @brief Decode RDEOperationEnumerate request.
+ *
+ * @param[out] msg - Request will be written to this.
+ * @return pldm_completion_codes.
+ */
+int decode_rde_operation_enumerate_req(const struct pldm_msg *msg);
+
+/**
+ * @brief Encode RDEOperationStatus response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] operation_count - Count of the operations.
+ * @param[in] operations - operations.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_operation_enumerate_resp(
+	uint8_t instance_id, uint8_t completion_code, uint16_t operation_count,
+	const struct pldm_rde_op_entry *operations, struct pldm_msg *msg);
+
+/**
+ * @brief Decode RDEOperationStatus Resp
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_len - Request message lenght.
+ * @param[out] completion_code - Pointer to completion Code
+ * @param[in] operation_count - Pointer to operations count.
+ * @param[in] operations - Pointer to the operation.
+  * @return pldm_completion_codes.
+ */
+int decode_rde_operation_enumerate_resp(const struct pldm_msg *msg,
+					uint32_t payload_length,
+					uint8_t *completion_code,
+					uint16_t *operation_count,
+					struct pldm_rde_op_entry *operations);
 
 #ifdef __cplusplus
 }

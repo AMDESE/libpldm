@@ -765,3 +765,81 @@ TEST(RDEOperationStatusTest, EncodeDecodeResoponseSuccess)
     EXPECT_EQ(memcmp(etag, decodedEtag.string_data, strlen(etag)), 0);
     EXPECT_EQ(decodedResponsePayload, responsePayload);
 }
+
+TEST(RDEOperationEnumerateTest, EncodeRequestSuccess)
+{
+    std::array<uint8_t, sizeof(pldm_msg_hdr)> requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_operation_enumerate_req(FIXED_INSTANCE_ID, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_RDE_OPERATION_ENUMERATE, PLDM_REQUEST);
+}
+
+TEST(RDEOperationEnumerateTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    const uint16_t operationCount = 2;
+    struct pldm_rde_op_entry operations[operationCount] = {
+        {0x12345678, 0x1234, PLDM_RDE_OPERATION_READ},
+        {0x87654321, 0x4321, PLDM_RDE_OPERATION_CREATE}};
+
+    const uint32_t payloadLen =
+        PLDM_RDE_OPERATION_ENUMERATE_RESP_FIXED_BYTES +
+        (operationCount * sizeof(struct pldm_rde_op_entry));
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* response = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_operation_enumerate_resp(
+                  FIXED_INSTANCE_ID, completionCode, operationCount, operations,
+                  response),
+              PLDM_SUCCESS);
+
+    uint8_t decodedCompletionCode;
+    uint16_t decodedOperationCount;
+    struct pldm_rde_op_entry decodedOperations[operationCount];
+
+    EXPECT_EQ(decode_rde_operation_enumerate_resp(
+                  response, payloadLen, &decodedCompletionCode,
+                  &decodedOperationCount, decodedOperations),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedOperationCount, operationCount);
+
+    for (int i = 0; i < decodedOperationCount; i++)
+    {
+        EXPECT_EQ(decodedOperations[i].resource_id, operations[i].resource_id);
+        EXPECT_EQ(decodedOperations[i].operation_id,
+                  operations[i].operation_id);
+        EXPECT_EQ(decodedOperations[i].operation_type,
+                  operations[i].operation_type);
+    }
+}
+
+TEST(RDEOperationEnumerateTest, EncodeDecodeResponseWithNoOperationSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    const uint16_t operationCount = 0;
+
+    const uint32_t payloadLen = PLDM_RDE_OPERATION_ENUMERATE_RESP_FIXED_BYTES;
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* response = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(
+        encode_rde_operation_enumerate_resp(FIXED_INSTANCE_ID, completionCode,
+                                            operationCount, NULL, response),
+        PLDM_SUCCESS);
+
+    uint8_t decodedCompletionCode;
+    uint16_t decodedOperationCount;
+
+    EXPECT_EQ(decode_rde_operation_enumerate_resp(response, payloadLen,
+                                                  &decodedCompletionCode,
+                                                  &decodedOperationCount, NULL),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedOperationCount, operationCount);
+}

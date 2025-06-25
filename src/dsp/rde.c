@@ -1223,3 +1223,142 @@ int decode_rde_multipart_receive_resp(
 
 	return pldm_msgbuf_complete(buf);
 }
+
+LIBPLDM_ABI_STABLE
+int encode_rde_operation_complete_req(uint8_t instance_id, uint32_t resource_id,
+				      rde_op_id operation_id,
+				      struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.msg_type = PLDM_REQUEST;
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.command = PLDM_RDE_OPERATION_COMPLETE;
+
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES,
+				    msg->payload,
+				    PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES);
+	if (rc) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, resource_id);
+	pldm_msgbuf_insert(buf, operation_id);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_rde_operation_complete_req(const struct pldm_msg *msg,
+				      uint32_t payload_length,
+				      uint32_t *resource_id,
+				      rde_op_id *operation_id)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || resource_id == NULL || operation_id == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+	if (payload_length < PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES,
+				    msg->payload,
+				    PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES);
+	if (rc) {
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, resource_id);
+	pldm_msgbuf_extract_p(buf, operation_id);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int encode_rde_operation_complete_resp(uint8_t instance_id,
+				       uint8_t completion_code,
+				       struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (completion_code != PLDM_SUCCESS) {
+		return encode_cc_only_resp(instance_id, PLDM_RDE,
+					   PLDM_RDE_OPERATION_COMPLETE,
+					   completion_code, msg);
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.msg_type = PLDM_RESPONSE;
+	header.command = PLDM_RDE_OPERATION_COMPLETE;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES,
+				    msg->payload,
+				    PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES);
+
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, completion_code);
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_rde_operation_complete_resp(const struct pldm_msg *msg,
+				       uint32_t payload_length,
+				       uint8_t *completion_code)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || completion_code == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (payload_length < PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES,
+				    msg->payload, payload_length);
+
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "msgbuf init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, completion_code);
+
+	if (*completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	return pldm_msgbuf_complete(buf);
+}

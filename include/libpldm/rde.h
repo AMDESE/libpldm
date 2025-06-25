@@ -102,6 +102,8 @@ enum pldm_rde_commands {
 #define PLDM_RDE_MULTIPART_SEND_RESP_BYTES		    2
 #define PLDM_RDE_MULTIPART_RECEIVE_REQ_BYTES		    7
 #define PLDM_RDE_MULTIPART_RECEIVE_RESP_FIXED_BYTES	    10
+#define PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES		    6
+#define PLDM_RDE_OPERATION_COMPLETE_RESP_BYTES		    1
 
 enum pldm_rde_varstring_format {
 	PLDM_RDE_VARSTRING_UNKNOWN = 0,
@@ -627,6 +629,54 @@ int decode_rde_multipart_receive_resp(
 	uint8_t *completion_code, uint8_t *transfer_flag,
 	uint32_t *data_transfer_handle, uint32_t *data_length_bytes,
 	uint8_t *data, uint32_t *data_integrity_checksum);
+
+/**
+ * @brief Encode RDEOperationComplete request.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] resource_id - The ResourceID.
+ * @param[in] operation_id - Identification number for this operation.
+ * @param[out] msg - Request will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_operation_complete_req(uint8_t instance_id, uint32_t resource_id,
+				      rde_op_id operation_id,
+				      struct pldm_msg *msg);
+/**
+ * @brief Decode RDEOperationComplete request.
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_length - Length of request message payload.
+ * @param[out] resource_id - The ResourceID.
+ * @param[out] operation_id - Identification number for this operation.
+ * @return pldm_completion_codes.
+ */
+int decode_rde_operation_complete_req(const struct pldm_msg *msg,
+				      uint32_t payload_length,
+				      uint32_t *resource_id,
+				      rde_op_id *operation_id);
+/**
+ * @brief Encode RDEOperationComplete response.
+ *
+ * @param[in] instance_id - Message's instance id.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[out] msg - Response message will be written to this.
+ * @return pldm_completion_codes.
+ */
+int encode_rde_operation_complete_resp(uint8_t instance_id,
+				       uint8_t completion_code,
+				       struct pldm_msg *msg_buf);
+/**
+ * @brief Decode RDEOperationInit Resp
+ *
+ * @param[in] msg - Request message.
+ * @param[in] payload_length - Request message lenght.
+ * @param[out] completion_code - Pointer to completion Code
+  * @return pldm_completion_codes.
+ */
+int decode_rde_operation_complete_resp(const struct pldm_msg *msg,
+				       uint32_t payload_length,
+				       uint8_t *completion_code);
 
 #ifdef __cplusplus
 }

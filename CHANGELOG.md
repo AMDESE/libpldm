@@ -95,6 +95,7 @@ Change categories:
 - rde: Add GetResourceETag support
 - rde: Add RDEMultipartSend support
 - rde: Add RDEMultipartReceive support
+- rde: Add RDEOperationComplete support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

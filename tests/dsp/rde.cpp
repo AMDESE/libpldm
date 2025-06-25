@@ -627,3 +627,51 @@ TEST(RDEMultipartReceiveTest, EncodeDecodeResoponseWithChecksumSuccess)
     EXPECT_EQ(decodeData, data);
     EXPECT_EQ(decodeDataIntegrityChecksum, dataIntegrityChecksum);
 }
+
+TEST(RDEOperationCompleteTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t resourceId = 0x12345678;
+    rde_op_id operationId = 0x42;
+    const uint32_t payloadLen = PLDM_RDE_OPERATION_COMPLETE_REQ_BYTES;
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_operation_complete_req(FIXED_INSTANCE_ID, resourceId,
+                                                operationId, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_RDE_OPERATION_COMPLETE, PLDM_REQUEST);
+
+    // Decode
+    uint32_t decodedResourceId = 0;
+    rde_op_id decodedOperationId = 0;
+    EXPECT_EQ(decode_rde_operation_complete_req(
+                  request, payloadLen, &decodedResourceId, &decodedOperationId),
+              PLDM_SUCCESS);
+    // Validate decoded values
+    EXPECT_EQ(decodedResourceId, resourceId);
+    EXPECT_EQ(decodedOperationId, operationId);
+}
+
+TEST(RDEOperationCompleteTest, EncodeDecodeResoponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + sizeof(completionCode)>
+        requestMsg{};
+    pldm_msg* response = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_operation_complete_resp(FIXED_INSTANCE_ID,
+                                                 completionCode, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_RDE_OPERATION_COMPLETE, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+
+    EXPECT_EQ(decode_rde_operation_complete_resp(
+                  response, sizeof(completionCode), &decodedCompletionCode),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+}

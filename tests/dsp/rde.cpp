@@ -628,6 +628,136 @@ TEST(RDEMultipartReceiveTest, EncodeDecodeResoponseWithChecksumSuccess)
     EXPECT_EQ(decodeDataIntegrityChecksum, dataIntegrityChecksum);
 }
 
+TEST(RDEOperationInitTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t resourceID = 1;
+    rde_op_id operationID = 1;
+    uint8_t operationType = PLDM_RDE_OPERATION_READ;
+    bitfield8_t operationFlags = {.byte = 0x03};
+    uint32_t sendDataTransferHandle = 1;
+    const uint8_t operationLocatorLength = 8;
+    const uint32_t requestPayloadLength = 4;
+    std::array<uint8_t, operationLocatorLength> operationLocator = {1, 2, 3, 4,
+                                                                    5, 6, 7, 8};
+    std::array<uint8_t, requestPayloadLength> requestPayload = {1, 2, 3, 4};
+
+    const uint32_t payloadLen = PLDM_RDE_OPERATION_INIT_REQ_FIXED_BYTES +
+                                operationLocatorLength + requestPayloadLength;
+
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_operation_init_req(
+                  FIXED_INSTANCE_ID, resourceID, operationID, operationType,
+                  &operationFlags, sendDataTransferHandle,
+                  operationLocatorLength, requestPayloadLength,
+                  operationLocator.data(), requestPayload.data(), request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_RDE_OPERATION_INIT, PLDM_REQUEST);
+
+    uint32_t decodedResourceID;
+    rde_op_id decodedOperationID;
+    uint8_t decodedOperationType;
+    bitfield8_t decodedOperationFlags;
+    uint32_t decodedSendDataTransferHandle;
+    uint8_t decodedOperationLocatorLength;
+    uint32_t decodedRequestPayloadLength;
+    std::array<uint8_t, operationLocatorLength> decodedOperationLocator = {0};
+    std::array<uint8_t, requestPayloadLength> decodedRequestPayload = {0};
+
+    EXPECT_EQ(decode_rde_operation_init_req(
+                  request, payloadLen, &decodedResourceID, &decodedOperationID,
+                  &decodedOperationType, &decodedOperationFlags,
+                  &decodedSendDataTransferHandle,
+                  &decodedOperationLocatorLength, &decodedRequestPayloadLength,
+                  decodedOperationLocator.data(), decodedRequestPayload.data()),
+              PLDM_SUCCESS);
+
+    // Validate decoded values
+    EXPECT_EQ(decodedResourceID, resourceID);
+    EXPECT_EQ(decodedOperationID, operationID);
+    EXPECT_EQ(decodedOperationType, operationType);
+    EXPECT_EQ(decodedOperationFlags.byte, operationFlags.byte);
+    EXPECT_EQ(decodedSendDataTransferHandle, sendDataTransferHandle);
+    EXPECT_EQ(decodedOperationLocatorLength, operationLocatorLength);
+    EXPECT_EQ(decodedRequestPayloadLength, requestPayloadLength);
+
+    if (decodedOperationLocatorLength > 0)
+    {
+        EXPECT_EQ(decodedOperationLocator, operationLocator);
+    }
+    if (decodedRequestPayloadLength > 0)
+    {
+        EXPECT_EQ(decodedRequestPayload, requestPayload);
+    }
+}
+
+TEST(RDEOperationInitTest, EncodeDecodeResoponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint8_t operationStatus = PLDM_RDE_OPERATION_COMPLETED;
+    uint8_t completionPercentage = 50;
+    uint32_t completionTimeSeconds = 0x7F;
+    bitfield8_t operationExecutionFlags = {.byte = 0x07};
+    uint32_t resultTransferHandle = 1;
+    bitfield8_t permissionFlags = {.byte = 0x03};
+    const uint32_t responsePayloadLength = 8;
+    const char* etag = "SampleData";
+    std::array<uint8_t, responsePayloadLength> responsePayload = {1, 2, 3, 4,
+                                                                  5, 6, 7, 8};
+    // size of etag("SampleData") is 10 + 1 for null terminator
+    const uint32_t payloadLen = PLDM_RDE_OPERATION_INIT_RESP_FIXED_BYTES +
+                                PLDM_RDE_VARSTRING_HEADER_SIZE + 11 +
+                                responsePayloadLength;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLen> requestMsg{};
+    pldm_msg* response = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_rde_operation_init_resp(
+                  FIXED_INSTANCE_ID, completionCode, operationStatus,
+                  completionPercentage, completionTimeSeconds,
+                  &operationExecutionFlags, resultTransferHandle,
+                  &permissionFlags, responsePayloadLength, etag,
+                  responsePayload.data(), response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_RDE_OPERATION_INIT, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+    uint8_t decodedOperationStatus;
+    uint8_t decodedCompletionPercentage;
+    uint32_t decodedCompletionTimeSeconds;
+    bitfield8_t decodedOperationExecutionFlags;
+    uint32_t decodedResultTransferHandle;
+    bitfield8_t decodedPermissionFlags;
+    uint32_t decodedResponsePayloadLength;
+    struct pldm_rde_varstring decodedEtag;
+    std::array<uint8_t, responsePayloadLength> decodedResponsePayload = {0};
+
+    EXPECT_EQ(decode_rde_operation_init_resp(
+                  response, payloadLen, &decodedCompletionCode,
+                  &decodedOperationStatus, &decodedCompletionPercentage,
+                  &decodedCompletionTimeSeconds,
+                  &decodedOperationExecutionFlags, &decodedResultTransferHandle,
+                  &decodedPermissionFlags, &decodedResponsePayloadLength,
+                  &decodedEtag, decodedResponsePayload.data()),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedOperationStatus, operationStatus);
+    EXPECT_EQ(decodedCompletionPercentage, completionPercentage);
+    EXPECT_EQ(decodedCompletionTimeSeconds, completionTimeSeconds);
+    EXPECT_EQ(decodedOperationExecutionFlags.byte,
+              operationExecutionFlags.byte);
+    EXPECT_EQ(decodedResultTransferHandle, resultTransferHandle);
+    EXPECT_EQ(decodedPermissionFlags.byte, permissionFlags.byte);
+    EXPECT_EQ(decodedResponsePayloadLength, responsePayloadLength);
+    EXPECT_EQ(decodedEtag.string_length_bytes, strlen(etag) + 1);
+    EXPECT_EQ(memcmp(etag, decodedEtag.string_data, strlen(etag)), 0);
+    EXPECT_EQ(decodedResponsePayload, responsePayload);
+}
+
 TEST(RDEOperationCompleteTest, EncodeDecodeRequestSuccess)
 {
     uint32_t resourceId = 0x12345678;

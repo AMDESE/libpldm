@@ -77,6 +77,7 @@ Change categories:
 - rde: Add GetResourceETag support
 - rde: Add RDEMultipartSend support
 - rde: Add RDEMultipartReceive support
+- rde: Add RDEOperationInit support
 - rde: Add RDEOperationComplete support
 - rde: Add RDEOperationStatus support
 - rde: Add RDEOperationEnumerate support

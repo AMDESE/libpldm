@@ -109,6 +109,8 @@ enum pldm_rde_commands {
 #define PLDM_RDE_OPERATION_STATUS_REQ_BYTES		    6
 #define PLDM_RDE_OPERATION_STATUS_RESP_FIXED_BYTES	    17
 #define PLDM_RDE_OPERATION_ENUMERATE_RESP_FIXED_BYTES	    3
+#define PLDM_GET_OEM_COUNT_REQ_BYTES			    5
+#define PLDM_GET_OEM_COUNT_RES_BYTES			    2
 
 enum pldm_rde_varstring_format {
 	PLDM_RDE_VARSTRING_UNKNOWN = 0,
@@ -945,6 +947,58 @@ int decode_rde_operation_enumerate_resp(const struct pldm_msg *msg,
 					uint8_t *completion_code,
 					uint16_t *operation_count,
 					struct pldm_rde_op_entry *operations);
+
+/**
+ * @brief Encode GetOEMCount request.
+ *
+ * @param[in] instance_id - Message's instance ID.
+ * @param[in] resource_id - Resource ID of the target Redfish resource.
+ * @param[in] schema_class - The class of schema being requested.
+ * @param[in] payload_length - Length of the request message payload.
+ * @param[out] msg - Encoded PLDM message.
+ * @return pldm_completion_codes.
+ */
+int encode_get_oem_count_req(uint8_t instance_id, uint32_t resource_id,
+			     uint8_t schema_class, size_t payload_length,
+			     struct pldm_msg *msg);
+
+/**
+ * @brief Decode GetOEMCount request.
+ *
+ * @param[in] msg - PLDM message to decode.
+ * @param[in] payload_length - Length of the request message payload.
+ * @param[out] resource_id - Decoded Resource ID.
+ * @param[out] schema_class - Pointer to a uint8_t variable.
+ * @return pldm_completion_codes.
+ */
+int decode_get_oem_count_req(const struct pldm_msg *msg, size_t payload_length,
+			     uint32_t *resource_id, uint8_t *schema_class);
+
+/**
+ * @brief Encode GetOEMCount response.
+ *
+ * @param[in] instance_id - Message's instance ID.
+ * @param[in] completion_code - PLDM completion code.
+ * @param[in] oem_count - Number of OEM entries.
+ * @param[in] payload_length - Length of the response message payload.
+ * @param[out] msg - Encoded PLDM message.
+ * @return pldm_completion_codes.
+ */
+int encode_get_oem_count_resp(uint8_t instance_id, uint8_t completion_code,
+			      uint8_t oem_count, size_t payload_length,
+			      struct pldm_msg *msg);
+
+/**
+ * @brief Decode GetOEMCount response.
+ *
+ * @param[in] msg - PLDM message to decode.
+ * @param[in] payload_length - Length of the response message payload.
+ * @param[out] completion_code - Decoded PLDM completion code.
+ * @param[out] oem_count - Decoded OEM count.
+ * @return pldm_completion_codes.
+ */
+int decode_get_oem_count_resp(const struct pldm_msg *msg, size_t payload_length,
+			      uint8_t *completion_code, uint8_t *oem_count);
 
 #ifdef __cplusplus
 }

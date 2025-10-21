@@ -973,3 +973,60 @@ TEST(RDEOperationEnumerateTest, EncodeDecodeResponseWithNoOperationSuccess)
     EXPECT_EQ(decodedCompletionCode, completionCode);
     EXPECT_EQ(decodedOperationCount, operationCount);
 }
+
+TEST(GetOEMCountTest, EncodeDecodeRequestSuccess)
+{
+    uint32_t resourceID = 0xDEADBEEF;
+    uint8_t schemaClass = 0xff;
+
+    std::array<uint8_t,
+               sizeof(struct pldm_msg_hdr) + PLDM_GET_OEM_COUNT_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_get_oem_count_req(FIXED_INSTANCE_ID, resourceID,
+                                       schemaClass,
+                                       PLDM_GET_OEM_COUNT_REQ_BYTES, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_OEM_COUNT, PLDM_REQUEST);
+
+    uint32_t decodedResourceID;
+    uint8_t decodedSchemaClass;
+
+    EXPECT_EQ(decode_get_oem_count_req(request, PLDM_GET_OEM_COUNT_REQ_BYTES,
+                                       &decodedResourceID, &decodedSchemaClass),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedResourceID, resourceID);
+    EXPECT_EQ(decodedSchemaClass, schemaClass);
+}
+
+TEST(GetOEMCountTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint32_t oemCount = 0xFF;
+
+    std::array<uint8_t,
+               sizeof(struct pldm_msg_hdr) + PLDM_GET_OEM_COUNT_RES_BYTES>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_get_oem_count_resp(FIXED_INSTANCE_ID, completionCode,
+                                        oemCount, PLDM_GET_OEM_COUNT_RES_BYTES,
+                                        response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_GET_OEM_COUNT, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+    uint8_t decodedOEMCount;
+
+    EXPECT_EQ(decode_get_oem_count_resp(response, PLDM_GET_OEM_COUNT_RES_BYTES,
+                                        &decodedCompletionCode,
+                                        &decodedOEMCount),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedOEMCount, oemCount);
+}

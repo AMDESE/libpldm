@@ -99,6 +99,7 @@ Change categories:
 - rde: Add RDEOperationComplete support
 - rde: Add RDEOperationStatus support
 - rde: Add RDEOperationEnumerate support
+- rde: Add GetOEMCount support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

@@ -1030,3 +1030,43 @@ TEST(GetOEMCountTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(decodedCompletionCode, completionCode);
     EXPECT_EQ(decodedOEMCount, oemCount);
 }
+
+TEST(GetRegistryCountTest, EncodeRequestSuccess)
+{
+    std::array<uint8_t, sizeof(pldm_msg_hdr)> requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_get_registry_count_req(FIXED_INSTANCE_ID, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_REGISTRY_COUNT, PLDM_REQUEST);
+}
+
+TEST(GetRegistryCountTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint32_t registryCount = 0xFF;
+
+    std::array<uint8_t,
+               sizeof(struct pldm_msg_hdr) + PLDM_GET_REGISTRY_COUNT_RES_BYTES>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_get_registry_count_resp(
+                  FIXED_INSTANCE_ID, completionCode, registryCount,
+                  PLDM_GET_REGISTRY_COUNT_RES_BYTES, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_GET_REGISTRY_COUNT, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+    uint8_t decodedRegistryCount;
+
+    EXPECT_EQ(decode_get_registry_count_resp(
+                  response, PLDM_GET_REGISTRY_COUNT_RES_BYTES,
+                  &decodedCompletionCode, &decodedRegistryCount),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedRegistryCount, registryCount);
+}

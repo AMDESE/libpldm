@@ -116,6 +116,8 @@ enum pldm_rde_commands {
 #define PLDM_GET_REGISTRY_DETAILS_RESP_FIXED_BYTES	    8
 #define PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES		    5
 #define PLDM_SELECT_REGISTRY_VERSION_RESP_BYTES		    1
+#define PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES		    1
+#define PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES		    6
 
 enum pldm_rde_varstring_format {
 	PLDM_RDE_VARSTRING_UNKNOWN = 0,
@@ -157,6 +159,17 @@ enum pldm_rde_operation_status {
 	PLDM_RDE_OPERATION_COMPLETED = 5,
 	PLDM_RDE_OPERATION_FAILED = 6,
 	PLDM_RDE_OPERATION_ABANDONED = 7,
+};
+
+enum pldm_rde_schema_formats {
+	PLDM_RDE_TEXT_FORMAT_RAW_UTF8 = 0,
+	PLDM_RDE_TEXT_FORMAT_GZIP_UTF8 = 1,
+	PLDM_RDE_SCHEMA_FORMAT_JSON = 0x10,
+	PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_JSON = 0x11,
+	PLDM_RDE_SCHEMA_FORMAT_CSLD = 0x20,
+	PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_CSLD = 0x21,
+	PLDM_RDE_SCHEMA_FORMAT_YAML = 0x30,
+	PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_YAML = 0x31,
 };
 
 struct pldm_rde_op_entry {
@@ -1196,6 +1209,91 @@ int encode_select_registry_version_resp(uint8_t instance_id,
 int decode_select_registry_version_resp(const struct pldm_msg *msg,
 					uint32_t payload_length,
 					uint8_t *completion_code);
+
+/**
+ * @brief Validate the RDE schema format.
+ *
+ * This function checks whether the provided schema format value is valid
+ * according to the supported PLDM RDE schema format definitions.
+ *
+ * @param[in] schema_format  The schema format identifier to validate.
+ *
+ * @return true if the schema format is valid, false otherwise.
+ */
+bool is_rde_schema_format_valid(uint8_t schema_format);
+
+/**
+ * @brief Encode a GetMessageRegistry request message.
+ *
+ * This function encodes a PLDM GetMessageRegistry request message with the
+ * specified registry index and instance ID.
+ *
+ * @param[in] instance_id      The instance ID for the PLDM message.
+ * @param[in] registry_index   The registry index to query.
+ * @param[in] payload_length   The total length of the payload.
+ * @param[out] msg             Pointer to the PLDM message structure to be populated.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int encode_get_message_registry_req(uint8_t instance_id, uint8_t registry_index,
+				    size_t payload_length,
+				    struct pldm_msg *msg);
+
+/**
+ * @brief Decode a GetMessageRegistry request message.
+ *
+ * This function decodes a PLDM GetMessageRegistry request message and extracts
+ * the registry index.
+ *
+ * @param[in] msg              Pointer to the received PLDM message.
+ * @param[in] payload_length   Length of the payload in the message.
+ * @param[out] registry_index  Pointer to store the decoded registry index.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int decode_get_message_registry_req(const struct pldm_msg *msg,
+				    size_t payload_length,
+				    uint8_t *registry_index);
+
+/**
+ * @brief Encode a GetMessageRegistry response message.
+ *
+ * This function encodes a PLDM GetMessageRegistry response message with the
+ * specified completion code, schema format, and transfer handle.
+ *
+ * @param[in] instance_id      The instance ID for the PLDM message.
+ * @param[in] completion_code  The completion code indicating success or failure.
+ * @param[in] schema_format    The format of the schema being returned.
+ * @param[in] transfer_handle  The transfer handle used for data transfer.
+ * @param[in] payload_length     Total length of the payload.
+ * @param[out] msg             Pointer to the PLDM message structure to be populated.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int encode_get_message_registry_resp(
+	uint8_t instance_id, uint8_t completion_code, uint8_t schema_format,
+	uint32_t transfer_handle, size_t payload_length, struct pldm_msg *msg);
+
+/**
+ * @brief Decode a GetMessageRegistry response message.
+ *
+ * This function decodes a PLDM GetMessageRegistry response message and extracts
+ * the completion code, schema format, and transfer handle.
+ *
+ * @param[in] msg               Pointer to the received PLDM message.
+ * @param[in] payload_length    Length of the payload in the message.
+ * @param[out] completion_code  Pointer to store the decoded completion code.
+ * @param[out] schema_format    Pointer to store the decoded schema format.
+ * @param[out] transfer_handle  Pointer to store the decoded transfer handle.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int decode_get_message_registry_resp(const struct pldm_msg *msg,
+				     uint32_t payload_length,
+				     uint8_t *completion_code,
+				     uint8_t *schema_format,
+				     uint32_t *transfer_handle);
+
 #ifdef __cplusplus
 }
 #endif

@@ -85,6 +85,7 @@ Change categories:
 - rde: Add GetRegistryCount support
 - rde: Add GetRegistryDetails support
 - rde: Add SelectRegistryVersion support
+- rde: Add GetMessageRegistry support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

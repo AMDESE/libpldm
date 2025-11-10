@@ -1169,3 +1169,58 @@ TEST(GetRegistryDetailsTest, EncodeDecodeResponseSuccess)
         EXPECT_EQ(decodedVersion[i].major, version[i].major);
     }
 }
+
+TEST(SelectRegistryVersionTest, EncodeDecodeRequestSuccess)
+{
+    uint8_t registryIndex = 0xff;
+    ver32_t registryVersion = {.alpha = 1, .update = 2, .minor = 3, .major = 4};
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_select_registry_version_req(
+                  FIXED_INSTANCE_ID, registryIndex, registryVersion,
+                  PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_SELECT_REGISTRY_VERSION, PLDM_REQUEST);
+
+    uint8_t decodedRegistryIndex;
+    ver32_t decodedRegistryVersion;
+
+    EXPECT_EQ(decode_select_registry_version_req(
+                  request, PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES,
+                  &decodedRegistryIndex, &decodedRegistryVersion),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedRegistryIndex, registryIndex);
+    EXPECT_EQ(decodedRegistryVersion.alpha, registryVersion.alpha);
+    EXPECT_EQ(decodedRegistryVersion.update, registryVersion.update);
+    EXPECT_EQ(decodedRegistryVersion.minor, registryVersion.minor);
+    EXPECT_EQ(decodedRegistryVersion.major, registryVersion.major);
+}
+
+TEST(SelectRegistryVersionTest, EncodeDecodeResoponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + sizeof(completionCode)>
+        requestMsg{};
+    pldm_msg* response = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_select_registry_version_resp(FIXED_INSTANCE_ID,
+                                                  completionCode, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_SELECT_REGISTRY_VERSION, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+
+    EXPECT_EQ(decode_select_registry_version_resp(
+                  response, sizeof(completionCode), &decodedCompletionCode),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+}

@@ -1224,3 +1224,63 @@ TEST(SelectRegistryVersionTest, EncodeDecodeResoponseSuccess)
 
     EXPECT_EQ(decodedCompletionCode, completionCode);
 }
+
+TEST(GetMessageRegistryTest, EncodeDecodeRequestSuccess)
+{
+    uint8_t registryIndex = 0xff;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_get_message_registry_req(
+                  FIXED_INSTANCE_ID, registryIndex,
+                  PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_MESSAGE_REGISTRY, PLDM_REQUEST);
+
+    uint8_t decodedRegistryIndex;
+
+    EXPECT_EQ(decode_get_message_registry_req(
+                  request, PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES,
+                  &decodedRegistryIndex),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedRegistryIndex, registryIndex);
+}
+
+TEST(GetMessageRegistryTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = PLDM_SUCCESS;
+    uint8_t schemaFormat = PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_JSON;
+    uint32_t transferHandle = 0xFF;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_get_message_registry_resp(
+                  FIXED_INSTANCE_ID, completionCode, schemaFormat,
+                  transferHandle, PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES,
+                  response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_GET_MESSAGE_REGISTRY, PLDM_RESPONSE);
+
+    uint8_t decodedCompletionCode;
+    uint8_t decodedSchemaFormat;
+    uint32_t decodedTransferHandle;
+
+    EXPECT_EQ(decode_get_message_registry_resp(
+                  response, PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES,
+                  &decodedCompletionCode, &decodedSchemaFormat,
+                  &decodedTransferHandle),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+    EXPECT_EQ(decodedSchemaFormat, schemaFormat);
+    EXPECT_EQ(decodedTransferHandle, transferHandle);
+}

@@ -2517,3 +2517,166 @@ int decode_select_registry_version_resp(const struct pldm_msg *msg,
 
 	return pldm_msgbuf_complete(buf);
 }
+
+LIBPLDM_ABI_STABLE
+bool is_rde_schema_format_valid(uint8_t schema_format)
+{
+	switch (schema_format) {
+	case PLDM_RDE_TEXT_FORMAT_RAW_UTF8:
+	case PLDM_RDE_TEXT_FORMAT_GZIP_UTF8:
+	case PLDM_RDE_SCHEMA_FORMAT_JSON:
+	case PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_JSON:
+	case PLDM_RDE_SCHEMA_FORMAT_CSLD:
+	case PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_CSLD:
+	case PLDM_RDE_SCHEMA_FORMAT_YAML:
+	case PLDM_RDE_SCHEMA_FORMAT_GZIPED_UTF8_YAML:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+LIBPLDM_ABI_STABLE
+int encode_get_message_registry_req(uint8_t instance_id, uint8_t registry_index,
+				    size_t payload_length, struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.msg_type = PLDM_REQUEST;
+	header.command = PLDM_GET_MESSAGE_REGISTRY;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, registry_index);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_get_message_registry_req(const struct pldm_msg *msg,
+				    size_t payload_length,
+				    uint8_t *registry_index)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || registry_index == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (payload_length != PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_GET_MESSAGE_REGISTRY_REQ_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, registry_index);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int encode_get_message_registry_resp(
+	uint8_t instance_id, uint8_t completion_code, uint8_t schema_format,
+	uint32_t transfer_handle, size_t payload_length, struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (!is_rde_schema_format_valid(schema_format)) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+	if (completion_code != PLDM_SUCCESS) {
+		return encode_cc_only_resp(instance_id, PLDM_RDE,
+					   PLDM_GET_MESSAGE_REGISTRY,
+					   completion_code, msg);
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.msg_type = PLDM_RESPONSE;
+	header.command = PLDM_GET_MESSAGE_REGISTRY;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES,
+				    msg->payload, payload_length);
+
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, completion_code);
+	pldm_msgbuf_insert(buf, schema_format);
+	pldm_msgbuf_insert(buf, transfer_handle);
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_get_message_registry_resp(const struct pldm_msg *msg,
+				     uint32_t payload_length,
+				     uint8_t *completion_code,
+				     uint8_t *schema_format,
+				     uint32_t *transfer_handle)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || completion_code == NULL || schema_format == NULL ||
+	    transfer_handle == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (payload_length < PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_GET_MESSAGE_REGISTRY_RESP_BYTES,
+				    msg->payload, payload_length);
+
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "msgbuf init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, completion_code);
+
+	if (*completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	pldm_msgbuf_extract_p(buf, schema_format);
+	pldm_msgbuf_extract_p(buf, transfer_handle);
+	return pldm_msgbuf_complete(buf);
+}

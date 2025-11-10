@@ -2168,3 +2168,203 @@ int decode_get_registry_count_resp(const struct pldm_msg *msg,
 
 	return pldm_msgbuf_complete(buf);
 }
+
+LIBPLDM_ABI_STABLE
+int encode_get_registry_details_req(uint8_t instance_id, uint8_t registry_index,
+				    size_t payload_length, struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.msg_type = PLDM_REQUEST;
+	header.command = PLDM_GET_REGISTRY_DETAILS;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_GET_REGISTRY_DETAILS_REQ_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, registry_index);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_get_registry_details_req(const struct pldm_msg *msg,
+				    size_t payload_length,
+				    uint8_t *registry_index)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || registry_index == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (payload_length != PLDM_GET_REGISTRY_DETAILS_REQ_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_GET_REGISTRY_DETAILS_REQ_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, registry_index);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int encode_get_registry_details_resp(
+	uint8_t instance_id, uint8_t completion_code,
+	const char *registry_prefix, uint8_t registry_prefix_type,
+	const char *registry_uri, uint8_t registry_uri_type,
+	uint16_t registry_language, uint8_t version_count, ver32_t *vesion,
+	size_t payload_length, struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || registry_prefix == NULL || registry_uri == NULL ||
+	    vesion == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (completion_code != PLDM_SUCCESS) {
+		return encode_cc_only_resp(instance_id, PLDM_RDE,
+					   PLDM_GET_REGISTRY_DETAILS,
+					   completion_code, msg);
+	}
+
+	// Length should include NULL terminator.
+	size_t registry_prefix_len = strlen(registry_prefix) + 1;
+	if (registry_prefix_len > 255) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	size_t registry_uri_len = strlen(registry_uri) + 1;
+	if (registry_uri_len > 255) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.msg_type = PLDM_RESPONSE;
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.command = PLDM_GET_REGISTRY_DETAILS;
+
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_GET_REGISTRY_DETAILS_RESP_FIXED_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, completion_code);
+	pldm_msgbuf_insert(buf, registry_prefix_type);
+	pldm_msgbuf_insert(buf, (uint8_t)registry_prefix_len);
+	rc = pldm_msgbuf_insert_array(buf, registry_prefix_len,
+				      (const uint8_t *)registry_prefix,
+				      registry_prefix_len);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, registry_uri_type);
+	pldm_msgbuf_insert(buf, (uint8_t)registry_uri_len);
+	rc = pldm_msgbuf_insert_array(buf, registry_uri_len,
+				      (const uint8_t *)registry_uri,
+				      registry_uri_len);
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, registry_language);
+	pldm_msgbuf_insert(buf, version_count);
+
+	for (int i = 0; i < version_count; ++i) {
+		pldm_msgbuf_insert(buf, vesion[i].alpha);
+		pldm_msgbuf_insert(buf, vesion[i].update);
+		pldm_msgbuf_insert(buf, vesion[i].minor);
+		pldm_msgbuf_insert(buf, vesion[i].major);
+	}
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_get_registry_details_resp(const struct pldm_msg *msg,
+				     size_t payload_length,
+				     uint8_t *completion_code,
+				     struct pldm_rde_varstring *registry_prefix,
+				     struct pldm_rde_varstring *registry_uri,
+				     uint16_t *registry_language,
+				     uint8_t *version_count, ver32_t *vesion)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || completion_code == NULL || registry_prefix == NULL ||
+	    registry_uri == NULL || registry_language == NULL ||
+	    version_count == NULL || vesion == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_GET_REGISTRY_DETAILS_RESP_FIXED_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, completion_code);
+	if (*completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	pldm_msgbuf_extract_p(buf, &registry_prefix->string_format);
+	pldm_msgbuf_extract_p(buf, &registry_prefix->string_length_bytes);
+
+	pldm_msgbuf_span_required(buf, registry_prefix->string_length_bytes,
+				  (void **)&registry_prefix->string_data);
+
+	pldm_msgbuf_extract_p(buf, &registry_uri->string_format);
+	pldm_msgbuf_extract_p(buf, &registry_uri->string_length_bytes);
+
+	pldm_msgbuf_span_required(buf, registry_uri->string_length_bytes,
+				  (void **)&registry_uri->string_data);
+
+	pldm_msgbuf_extract_p(buf, registry_language);
+	pldm_msgbuf_extract_p(buf, version_count);
+
+	for (int i = 0; i < *version_count; ++i) {
+		pldm_msgbuf_extract_p(buf, &vesion[i].alpha);
+		pldm_msgbuf_extract_p(buf, &vesion[i].update);
+		pldm_msgbuf_extract_p(buf, &vesion[i].minor);
+		pldm_msgbuf_extract_p(buf, &vesion[i].major);
+	}
+
+	return pldm_msgbuf_complete(buf);
+}

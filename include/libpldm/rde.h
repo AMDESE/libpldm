@@ -38,6 +38,8 @@ extern "C" {
 #define PLDM_GET_OEM_COUNT_REQ_BYTES			    5
 #define PLDM_GET_OEM_COUNT_RES_BYTES			    2
 #define PLDM_GET_REGISTRY_COUNT_RES_BYTES		    2
+#define PLDM_GET_REGISTRY_DETAILS_REQ_BYTES		    1
+#define PLDM_GET_REGISTRY_DETAILS_RESP_FIXED_BYTES	    8
 
 enum pldm_rde_commands {
 	PLDM_NEGOTIATE_REDFISH_PARAMETERS = 0x01,
@@ -47,6 +49,7 @@ enum pldm_rde_commands {
 	PLDM_GET_RESOURCE_ETAG = 0x05,
 	PLDM_GET_OEM_COUNT = 0x06,
 	PLDM_GET_REGISTRY_COUNT = 0x08,
+	PLDM_GET_REGISTRY_DETAILS = 0x09,
 	PLDM_RDE_OPERATION_INIT = 0x10,
 	PLDM_RDE_OPERATION_COMPLETE = 0x13,
 	PLDM_RDE_OPERATION_STATUS = 0x14,
@@ -1044,6 +1047,90 @@ int decode_get_registry_count_resp(const struct pldm_msg *msg,
 				   uint8_t *completion_code,
 				   uint8_t *registry_count);
 
+/**
+ * @brief Encode a GetRegistryDetails request message.
+ *
+ * This function encodes the PLDM GetRegistryDetails request message with the
+ * specified registry index and instance ID.
+ *
+ * @param[in] instance_id      The instance ID for the PLDM message.
+ * @param[in] registry_index   The registry index to be queried.
+ * @param[in] payload_length   The total length of the payload.
+ * @param[out] msg             Pointer to the PLDM message structure to be populated.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int encode_get_registry_details_req(uint8_t instance_id, uint8_t registry_index,
+				    size_t payload_length,
+				    struct pldm_msg *msg);
+
+/**
+ * @brief Decode a GetRegistryDetails request message.
+ *
+ * This function decodes the PLDM GetRegistryDetails request message and extracts
+ * the registry index.
+ *
+ * @param[in] msg              Pointer to the received PLDM message.
+ * @param[in] payload_length   Length of the payload in the message.
+ * @param[out] registry_index  Pointer to store the decoded registry index.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int decode_get_registry_details_req(const struct pldm_msg *msg,
+				    size_t payload_length,
+				    uint8_t *registry_index);
+
+/**
+ * @brief Encode a GetRegistryDetails response message.
+ *
+ * This function encodes the PLDM GetRegistryDetails response message with registry
+ * metadata including prefix, URI, language, and version information.
+ *
+ * @param[in] instance_id           The instance ID for the PLDM message.
+ * @param[in] completion_code       The completion code indicating success or failure.
+ * @param[in] registry_prefix       Pointer to the registry prefix string.
+ * @param[in] registry_prefix_type  Type of the registry prefix (e.g., ASCII, UTF-8).
+ * @param[in] registry_uri          Pointer to the registry URI string.
+ * @param[in] registry_uri_type     Type of the registry URI (e.g., ASCII, UTF-8).
+ * @param[in] registry_language     Language code for the registry (ISO 639-1 format).
+ * @param[in] version_count         Number of version entries.
+ * @param[in] vesion                Pointer to array of version structures (ver32_t).
+ * @param[in] payload_length        Total length of the payload buffer.
+ * @param[out] msg                  Pointer to the PLDM message structure to be populated.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int encode_get_registry_details_resp(
+	uint8_t instance_id, uint8_t completion_code,
+	const char *registry_prefix, uint8_t registry_prefix_type,
+	const char *registry_uri, uint8_t registry_uri_type,
+	uint16_t registry_language, uint8_t version_count, ver32_t *vesion,
+	size_t payload_length, struct pldm_msg *msg);
+
+/**
+ * @brief Decode a GetRegistryDetails response message.
+ *
+ * This function decodes the PLDM GetRegistryDetails response message and extracts
+ * registry metadata including prefix, URI, language, and version information.
+ *
+ * @param[in] msg                 Pointer to the received PLDM message.
+ * @param[in] payload_length      Length of the payload in the message.
+ * @param[out] completion_code    Pointer to store the decoded completion code.
+ * @param[out] registry_prefix    Pointer to structure to store decoded registry prefix.
+ * @param[out] registry_uri       Pointer to structure to store decoded registry URI.
+ * @param[out] registry_language  Pointer to store decoded registry language code.
+ * @param[out] version_count      Pointer to store number of decoded version entries.
+ * @param[out] vesion             Pointer to array to store decoded version structures.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int decode_get_registry_details_resp(const struct pldm_msg *msg,
+				     size_t payload_length,
+				     uint8_t *completion_code,
+				     struct pldm_rde_varstring *registry_prefix,
+				     struct pldm_rde_varstring *registry_uri,
+				     uint16_t *registry_language,
+				     uint8_t *version_count, ver32_t *vesion);
 #ifdef __cplusplus
 }
 #endif

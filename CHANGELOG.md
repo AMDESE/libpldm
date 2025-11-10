@@ -83,6 +83,7 @@ Change categories:
 - rde: Add RDEOperationEnumerate support
 - rde: Add GetOEMCount support
 - rde: Add GetRegistryCount support
+- rde: Add GetRegistryDetails support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

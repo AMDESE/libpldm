@@ -2368,3 +2368,152 @@ int decode_get_registry_details_resp(const struct pldm_msg *msg,
 
 	return pldm_msgbuf_complete(buf);
 }
+
+LIBPLDM_ABI_STABLE
+int encode_select_registry_version_req(uint8_t instance_id,
+				       uint8_t registry_index,
+				       ver32_t registry_version,
+				       size_t payload_length,
+				       struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.msg_type = PLDM_REQUEST;
+	header.command = PLDM_SELECT_REGISTRY_VERSION;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, registry_index);
+	pldm_msgbuf_insert(buf, registry_version.alpha);
+	pldm_msgbuf_insert(buf, registry_version.update);
+	pldm_msgbuf_insert(buf, registry_version.minor);
+	pldm_msgbuf_insert(buf, registry_version.major);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_select_registry_version_req(const struct pldm_msg *msg,
+				       size_t payload_length,
+				       uint8_t *registry_index,
+				       ver32_t *registry_version)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || registry_index == NULL || registry_version == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (payload_length != PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf, PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES,
+				    msg->payload, payload_length);
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, registry_index);
+	pldm_msgbuf_extract(buf, registry_version->alpha);
+	pldm_msgbuf_extract(buf, registry_version->update);
+	pldm_msgbuf_extract(buf, registry_version->minor);
+	pldm_msgbuf_extract(buf, registry_version->major);
+
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int encode_select_registry_version_resp(uint8_t instance_id,
+					uint8_t completion_code,
+					struct pldm_msg *msg)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (completion_code != PLDM_SUCCESS) {
+		return encode_cc_only_resp(instance_id, PLDM_RDE,
+					   PLDM_SELECT_REGISTRY_VERSION,
+					   completion_code, msg);
+	}
+
+	struct pldm_header_info header = { 0 };
+	header.instance = instance_id;
+	header.pldm_type = PLDM_RDE;
+	header.msg_type = PLDM_RESPONSE;
+	header.command = PLDM_SELECT_REGISTRY_VERSION;
+	rc = pack_pldm_header(&header, &(msg->hdr));
+
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_SELECT_REGISTRY_VERSION_RESP_BYTES,
+				    msg->payload,
+				    PLDM_SELECT_REGISTRY_VERSION_RESP_BYTES);
+
+	if (rc != PLDM_SUCCESS) {
+		return rc;
+	}
+
+	pldm_msgbuf_insert(buf, completion_code);
+	return pldm_msgbuf_complete(buf);
+}
+
+LIBPLDM_ABI_STABLE
+int decode_select_registry_version_resp(const struct pldm_msg *msg,
+					uint32_t payload_length,
+					uint8_t *completion_code)
+{
+	PLDM_MSGBUF_DEFINE_P(buf);
+	int rc;
+
+	if (msg == NULL || completion_code == NULL) {
+		return PLDM_ERROR_INVALID_DATA;
+	}
+
+	if (payload_length < PLDM_SELECT_REGISTRY_VERSION_RESP_BYTES) {
+		return PLDM_ERROR_INVALID_LENGTH;
+	}
+
+	rc = pldm_msgbuf_init_errno(buf,
+				    PLDM_SELECT_REGISTRY_VERSION_RESP_BYTES,
+				    msg->payload, payload_length);
+
+	if (rc != PLDM_SUCCESS) {
+		fprintf(stderr, "msgbuf init failed\n");
+		return rc;
+	}
+
+	pldm_msgbuf_extract_p(buf, completion_code);
+
+	if (*completion_code != PLDM_SUCCESS) {
+		return PLDM_SUCCESS;
+	}
+
+	return pldm_msgbuf_complete(buf);
+}

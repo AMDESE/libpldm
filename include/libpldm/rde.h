@@ -114,6 +114,8 @@ enum pldm_rde_commands {
 #define PLDM_GET_REGISTRY_COUNT_RES_BYTES		    2
 #define PLDM_GET_REGISTRY_DETAILS_REQ_BYTES		    1
 #define PLDM_GET_REGISTRY_DETAILS_RESP_FIXED_BYTES	    8
+#define PLDM_SELECT_REGISTRY_VERSION_REQ_BYTES		    5
+#define PLDM_SELECT_REGISTRY_VERSION_RESP_BYTES		    1
 
 enum pldm_rde_varstring_format {
 	PLDM_RDE_VARSTRING_UNKNOWN = 0,
@@ -1124,6 +1126,76 @@ int decode_get_registry_details_resp(const struct pldm_msg *msg,
 				     struct pldm_rde_varstring *registry_uri,
 				     uint16_t *registry_language,
 				     uint8_t *version_count, ver32_t *vesion);
+
+/**
+ * @brief Encode a SelectRegistryVersion request message.
+ *
+ * This function encodes a PLDM SelectRegistryVersion request message with the
+ * specified registry index and version information.
+ *
+ * @param[in] instance_id        The instance ID for the PLDM message.
+ * @param[in] registry_index     The registry index to select.
+ * @param[in] registry_version   The version structure to be encoded.
+ * @param[in] payload_length     The total length of the payload.
+ * @param[out] msg               Pointer to the PLDM message structure to be populated.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int encode_select_registry_version_req(uint8_t instance_id,
+				       uint8_t registry_index,
+				       ver32_t registry_version,
+				       size_t payload_length,
+				       struct pldm_msg *msg);
+
+/**
+ * @brief Decode a SelectRegistryVersion request message.
+ *
+ * This function decodes a PLDM SelectRegistryVersion request message and extracts
+ * the registry index and version information.
+ *
+ * @param[in] msg                Pointer to the received PLDM message.
+ * @param[in] payload_length     Length of the payload in the message.
+ * @param[out] registry_index    Pointer to store the decoded registry index.
+ * @param[out] registry_version  Pointer to store the decoded version structure.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int decode_select_registry_version_req(const struct pldm_msg *msg,
+				       size_t payload_length,
+				       uint8_t *registry_index,
+				       ver32_t *registry_version);
+
+/**
+ * @brief Encode a SelectRegistryVersion response message.
+ *
+ * This function encodes a PLDM SelectRegistryVersion response message with the
+ * specified completion code.
+ *
+ * @param[in] instance_id      The instance ID for the PLDM message.
+ * @param[in] completion_code  The completion code indicating success or failure.
+ * @param[out] msg             Pointer to the PLDM message structure to be populated.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int encode_select_registry_version_resp(uint8_t instance_id,
+					uint8_t completion_code,
+					struct pldm_msg *msg);
+
+/**
+ * @brief Decode a SelectRegistryVersion response message.
+ *
+ * This function decodes a PLDM SelectRegistryVersion response message and extracts
+ * the completion code.
+ *
+ * @param[in] msg               Pointer to the received PLDM message.
+ * @param[in] payload_length    Length of the payload in the message.
+ * @param[out] completion_code  Pointer to store the decoded completion code.
+ *
+ * @return PLDM_SUCCESS on success, or an appropriate error code on failure.
+ */
+int decode_select_registry_version_resp(const struct pldm_msg *msg,
+					uint32_t payload_length,
+					uint8_t *completion_code);
 #ifdef __cplusplus
 }
 #endif

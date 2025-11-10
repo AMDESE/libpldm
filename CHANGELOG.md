@@ -381,6 +381,7 @@ Deprecated since v0.13.0:
 - rde: Add GetOEMCount support
 - rde: Add GetRegistryCount support
 - rde: Add GetRegistryDetails support
+- rde: Add SelectRegistryVersion support
 
 - platform: Add decode_pldm_file_descriptor_pdr() and
   decode_pldm_file_descriptor_pdr_names()

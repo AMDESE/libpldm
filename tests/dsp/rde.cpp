@@ -1070,3 +1070,102 @@ TEST(GetRegistryCountTest, EncodeDecodeResponseSuccess)
     EXPECT_EQ(decodedCompletionCode, completionCode);
     EXPECT_EQ(decodedRegistryCount, registryCount);
 }
+
+TEST(GetRegistryDetailsTest, EncodeDecodeRequestSuccess)
+{
+    uint8_t registryIndex = 0xff;
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) +
+                            PLDM_GET_REGISTRY_DETAILS_REQ_BYTES>
+        requestMsg{};
+    pldm_msg* request = (pldm_msg*)requestMsg.data();
+
+    EXPECT_EQ(encode_get_registry_details_req(
+                  FIXED_INSTANCE_ID, registryIndex,
+                  PLDM_GET_REGISTRY_DETAILS_REQ_BYTES, request),
+              PLDM_SUCCESS);
+
+    checkHeader(request, PLDM_GET_REGISTRY_DETAILS, PLDM_REQUEST);
+
+    uint8_t decodedRegistryIndex;
+
+    EXPECT_EQ(decode_get_registry_details_req(
+                  request, PLDM_GET_REGISTRY_DETAILS_REQ_BYTES,
+                  &decodedRegistryIndex),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedRegistryIndex, registryIndex);
+}
+
+TEST(GetRegistryDetailsTest, EncodeDecodeResponseSuccess)
+{
+    uint8_t completionCode = 0;
+
+    constexpr const char* registryPrefix = "Test Prefix";
+    constexpr const char* registryUri = "Test URI";
+    uint16_t registryLanguage = 0x12AB;
+    constexpr uint8_t versionCount = 2;
+    std::array<ver32_t, versionCount> version = {{
+        {1, 0, 2, 3}, // First version: alpha=1, update=0, minor=2, major=3
+        {4, 5, 6, 7}  // Second version: alpha=4, update=5, minor=6, major=7
+    }};
+
+    constexpr size_t payloadLength =
+        PLDM_RDE_NEGOTIATE_REDFISH_PARAMETERS_RESP_MIN_SIZE +
+        sizeof("Test Prefix") + sizeof("Test URI") +
+        (versionCount * sizeof(ver32_t));
+
+    std::array<uint8_t, sizeof(struct pldm_msg_hdr) + payloadLength>
+        responseMsg{};
+    pldm_msg* response = (pldm_msg*)responseMsg.data();
+
+    EXPECT_EQ(encode_get_registry_details_resp(
+                  FIXED_INSTANCE_ID, completionCode, registryPrefix,
+                  PLDM_RDE_VARSTRING_UTF_8, registryUri,
+                  PLDM_RDE_VARSTRING_UTF_8, registryLanguage, versionCount,
+                  (ver32_t*)version.data(), payloadLength, response),
+              PLDM_SUCCESS);
+
+    checkHeader(response, PLDM_GET_REGISTRY_DETAILS, PLDM_RESPONSE);
+
+    // verify payload.
+    uint8_t decodedCompletionCode;
+    struct pldm_rde_varstring decodedRegistryPrefix;
+    struct pldm_rde_varstring decodedRegistryURI;
+    uint16_t decodedRegistryLanguage;
+    uint8_t decodedVersionCount;
+    std::array<ver32_t, versionCount> decodedVersion;
+
+    EXPECT_EQ(decode_get_registry_details_resp(
+                  response, payloadLength, &decodedCompletionCode,
+                  &decodedRegistryPrefix, &decodedRegistryURI,
+                  &decodedRegistryLanguage, &decodedVersionCount,
+                  (ver32_t*)decodedVersion.data()),
+              PLDM_SUCCESS);
+
+    EXPECT_EQ(decodedCompletionCode, completionCode);
+
+    EXPECT_EQ(decodedRegistryPrefix.string_format, PLDM_RDE_VARSTRING_UTF_8);
+    EXPECT_EQ(decodedRegistryPrefix.string_length_bytes,
+              strlen(registryPrefix) + 1);
+    EXPECT_EQ(strncmp(registryPrefix, decodedRegistryPrefix.string_data,
+                      strlen(registryPrefix)),
+              0);
+    EXPECT_EQ(decodedRegistryPrefix.string_format, PLDM_RDE_VARSTRING_UTF_8);
+    EXPECT_EQ(decodedRegistryPrefix.string_length_bytes,
+              strlen(registryPrefix) + 1);
+    EXPECT_EQ(strncmp(registryPrefix, decodedRegistryPrefix.string_data,
+                      strlen(registryPrefix)),
+              0);
+
+    EXPECT_EQ(decodedRegistryLanguage, registryLanguage);
+    EXPECT_EQ(decodedVersionCount, versionCount);
+
+    for (uint8_t i = 0; i < decodedVersionCount; ++i)
+    {
+        EXPECT_EQ(decodedVersion[i].alpha, version[i].alpha);
+        EXPECT_EQ(decodedVersion[i].update, version[i].update);
+        EXPECT_EQ(decodedVersion[i].minor, version[i].minor);
+        EXPECT_EQ(decodedVersion[i].major, version[i].major);
+    }
+}

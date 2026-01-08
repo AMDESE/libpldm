@@ -2046,6 +2046,11 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 			buf, pdr_value->oem_list[i]->length,
 			(void **)&pdr_value->oem_list[i]->name);
 	}
+
+	rc = pldm_msgbuf_complete(buf);
+	if (rc) {
+		return pldm_xlate_errno(rc);
+	}
 	return PLDM_SUCCESS;
 }
 

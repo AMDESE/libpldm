@@ -1957,7 +1957,8 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 				     size_t pdr_data_length,
 				     struct pldm_redfish_resource_pdr *pdr_value)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *loc;
 	int rc;
 
 	if (!pdr_data || !pdr_data_length || !pdr_value) {
@@ -1983,12 +1984,14 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 	pldm_msgbuf_extract(buf, pdr_value->cont_resrc_id);
 
 	pldm_msgbuf_extract(buf, pdr_value->prop_cont_resrc_length);
-	pldm_msgbuf_span_required(buf, pdr_value->prop_cont_resrc_length,
-				  (void **)&pdr_value->prop_cont_resrc_name);
+	loc = NULL;
+	pldm_msgbuf_span_required(buf, pdr_value->prop_cont_resrc_length, &loc);
+	pdr_value->prop_cont_resrc_name = (uint8_t *)loc;
 
 	pldm_msgbuf_extract_uint16(buf, pdr_value->sub_uri_length);
-	pldm_msgbuf_span_required(buf, pdr_value->sub_uri_length,
-				  (void **)&pdr_value->sub_uri_name);
+	loc = NULL;
+	pldm_msgbuf_span_required(buf, pdr_value->sub_uri_length, &loc);
+	pdr_value->sub_uri_name = (uint8_t *)loc;
 
 	pldm_msgbuf_extract_uint16(buf, pdr_value->add_resrc_id_count);
 	pdr_value->additional_resrc = malloc(pdr_value->add_resrc_id_count *
@@ -2010,9 +2013,10 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 				    pdr_value->additional_resrc[i]->resrc_id);
 		pldm_msgbuf_extract(buf,
 				    pdr_value->additional_resrc[i]->length);
+		loc = NULL;
 		pldm_msgbuf_span_required(
-			buf, pdr_value->additional_resrc[i]->length,
-			(void **)&pdr_value->additional_resrc[i]->name);
+			buf, pdr_value->additional_resrc[i]->length, &loc);
+		pdr_value->additional_resrc[i]->name = (uint8_t *)loc;
 	}
 
 	pldm_msgbuf_extract(buf, pdr_value->major_schema_version.alpha);
@@ -2024,8 +2028,9 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 	pldm_msgbuf_extract(buf, pdr_value->major_schema_dict_signature);
 
 	pldm_msgbuf_extract_uint8_to_size(buf, pdr_value->major_schema.length);
-	pldm_msgbuf_span_required(buf, pdr_value->major_schema.length,
-				  (void **)&pdr_value->major_schema.name);
+	loc = NULL;
+	pldm_msgbuf_span_required(buf, pdr_value->major_schema.length, &loc);
+	pdr_value->major_schema.name = (uint8_t *)loc;
 
 	pldm_msgbuf_extract(buf, pdr_value->oem_count);
 	pdr_value->oem_list =
@@ -2042,9 +2047,10 @@ int decode_redfish_resource_pdr_data(const void *pdr_data,
 		}
 
 		pldm_msgbuf_extract(buf, pdr_value->oem_list[i]->length);
-		pldm_msgbuf_span_required(
-			buf, pdr_value->oem_list[i]->length,
-			(void **)&pdr_value->oem_list[i]->name);
+		loc = NULL;
+		pldm_msgbuf_span_required(buf, pdr_value->oem_list[i]->length,
+					  &loc);
+		pdr_value->oem_list[i]->name = (uint8_t *)loc;
 	}
 
 	rc = pldm_msgbuf_complete(buf);

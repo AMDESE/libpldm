@@ -2085,7 +2085,8 @@ LIBPLDM_ABI_STABLE
 int decode_redfish_action_pdr_data(const void *pdr_data, size_t pdr_data_length,
 				   struct pldm_redfish_action_pdr *pdr_value)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *loc;
 	int rc;
 
 	if (!pdr_data || !pdr_data_length || !pdr_value) {
@@ -2132,14 +2133,16 @@ int decode_redfish_action_pdr_data(const void *pdr_data, size_t pdr_data_length,
 
 		pldm_msgbuf_extract(buf,
 				    (pdr_value->action[i]->name_length_bytes));
+		loc = NULL;
 		pldm_msgbuf_span_required(
-			buf, pdr_value->action[i]->name_length_bytes,
-			(void **)&pdr_value->action[i]->name);
+			buf, pdr_value->action[i]->name_length_bytes, &loc);
+		pdr_value->action[i]->name = (uint8_t *)loc;
 		pldm_msgbuf_extract(buf,
 				    pdr_value->action[i]->path_length_bytes);
+		loc = NULL;
 		pldm_msgbuf_span_required(
-			buf, pdr_value->action[i]->path_length_bytes,
-			(void **)&pdr_value->action[i]->path);
+			buf, pdr_value->action[i]->path_length_bytes, &loc);
+		pdr_value->action[i]->path = (uint8_t *)loc;
 	}
 	return PLDM_SUCCESS;
 }

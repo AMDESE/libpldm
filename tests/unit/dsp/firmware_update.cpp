@@ -1014,7 +1014,9 @@ TEST(DecodeComponentImageInfo, errorPaths)
     rc = decode_pldm_comp_image_info(invalidCompImageInfo3.data(),
                                      invalidCompImageInfo3.size(),
                                      &outCompImageInfo, &outCompVersionStr);
-    EXPECT_EQ(rc, PLDM_ERROR_INVALID_DATA);
+    /* Comparison stamp without UseComponentComparisonStamp is accepted so AMD
+     * force-update bundles can parse. */
+    EXPECT_EQ(rc, PLDM_SUCCESS);
 
     // Invalid ComponentLocationOffset - 0
     constexpr std::array<uint8_t, compImageInfoSize> invalidCompImageInfo4{

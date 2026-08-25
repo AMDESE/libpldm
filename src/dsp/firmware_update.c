@@ -595,7 +595,8 @@ int decode_pldm_package_header_info(
 	struct pldm_package_header_information *package_header_info,
 	struct variable_field *package_version_str)
 {
-	DEFINE_PLDM_PACKAGE_FORMAT_PIN_FR01H(pin);
+	/* Accept v1.0–v1.3 headers (pin is the maximum supported revision). */
+	DEFINE_PLDM_PACKAGE_FORMAT_PIN_FR04H(pin);
 	pldm_package_header_information_pad hdr;
 	struct pldm_package pkg = { 0 };
 	int rc;
@@ -799,14 +800,16 @@ static int decode_pldm_package_firmware_device_id_record_errno(
 }
 
 LIBPLDM_ABI_STABLE
-int decode_firmware_device_id_record(
+int decode_firmware_device_id_record_with_revision(
 	const uint8_t *data, size_t length,
 	uint16_t component_bitmap_bit_length,
+	uint8_t package_header_format_revision,
 	struct pldm_firmware_device_id_record *fw_device_id_record,
 	struct variable_field *applicable_components,
 	struct variable_field *comp_image_set_version_str,
 	struct variable_field *record_descriptors,
-	struct variable_field *fw_device_pkg_data)
+	struct variable_field *fw_device_pkg_data,
+	struct variable_field *reference_manifest_data)
 {
 	struct pldm_package_firmware_device_id_record rec;
 	pldm_package_header_information_pad hdr;
@@ -818,8 +821,7 @@ int decode_firmware_device_id_record(
 		return PLDM_ERROR_INVALID_DATA;
 	}
 
-	hdr.package_header_format_revision =
-		PLDM_PACKAGE_HEADER_FORMAT_REVISION_FR01H;
+	hdr.package_header_format_revision = package_header_format_revision;
 	hdr.component_bitmap_bit_length = component_bitmap_bit_length;
 
 	rc = decode_pldm_package_firmware_device_id_record_errno(
@@ -844,8 +846,28 @@ int decode_firmware_device_id_record(
 	*comp_image_set_version_str = rec.component_image_set_version_string;
 	*record_descriptors = rec.record_descriptors;
 	*fw_device_pkg_data = rec.firmware_device_package_data;
+	if (reference_manifest_data) {
+		*reference_manifest_data = rec.reference_manifest_data;
+	}
 
 	return PLDM_SUCCESS;
+}
+
+LIBPLDM_ABI_STABLE
+int decode_firmware_device_id_record(
+	const uint8_t *data, size_t length,
+	uint16_t component_bitmap_bit_length,
+	struct pldm_firmware_device_id_record *fw_device_id_record,
+	struct variable_field *applicable_components,
+	struct variable_field *comp_image_set_version_str,
+	struct variable_field *record_descriptors,
+	struct variable_field *fw_device_pkg_data)
+{
+	return decode_firmware_device_id_record_with_revision(
+		data, length, component_bitmap_bit_length,
+		PLDM_PACKAGE_HEADER_FORMAT_REVISION_FR01H, fw_device_id_record,
+		applicable_components, comp_image_set_version_str,
+		record_descriptors, fw_device_pkg_data, NULL);
 }
 
 LIBPLDM_ABI_STABLE
@@ -1043,11 +1065,16 @@ static int decode_pldm_comp_image_info_errno(
 	pldm_comp_image_info->comp_version_string_length =
 		data_header->comp_version_string_length;
 
+	/* Some AMD PLDM bundles set a comparison stamp without bit1
+	 * (force-update). Accept those packages.
+	 */
+	#if 0
 	if ((pldm_comp_image_info->comp_options.bits.bit1 == false &&
 	     pldm_comp_image_info->comp_comparison_stamp !=
 		     PLDM_FWUP_INVALID_COMPONENT_COMPARISON_TIMESTAMP)) {
 		return -EBADMSG;
 	}
+	#endif
 
 	if (pldm_comp_image_info->comp_location_offset == 0 ||
 	    pldm_comp_image_info->comp_size == 0) {

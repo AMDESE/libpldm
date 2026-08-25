@@ -1125,6 +1125,9 @@ int decode_pldm_package_header_info(
  *  @param[out] fw_device_pkg_data - pointer to FirmwareDevicePackageData
  *
  *  @return pldm_completion_codes
+ *
+ *  Assumes package header format revision FR01H. For v1.2/v1.3 packages use
+ *  @ref decode_firmware_device_id_record_with_revision.
  */
 int decode_firmware_device_id_record(
 	const uint8_t *data, size_t length,
@@ -1134,6 +1137,30 @@ int decode_firmware_device_id_record(
 	struct variable_field *comp_image_set_version_str,
 	struct variable_field *record_descriptors,
 	struct variable_field *fw_device_pkg_data);
+
+/** @brief Decode individual firmware device ID record for a known package
+ *         header format revision
+ *
+ *  Same as @ref decode_firmware_device_id_record, but parses the optional
+ *  ReferenceManifestData field present from package format FR04H (v1.3).
+ *
+ *  @param[in] package_header_format_revision - PackageHeaderFormatRevision
+ *                                              from the package header
+ *  @param[out] reference_manifest_data - pointer to ReferenceManifestData;
+ *                                        may be NULL
+ *
+ *  @return pldm_completion_codes
+ */
+int decode_firmware_device_id_record_with_revision(
+	const uint8_t *data, size_t length,
+	uint16_t component_bitmap_bit_length,
+	uint8_t package_header_format_revision,
+	struct pldm_firmware_device_id_record *fw_device_id_record,
+	struct variable_field *applicable_components,
+	struct variable_field *comp_image_set_version_str,
+	struct variable_field *record_descriptors,
+	struct variable_field *fw_device_pkg_data,
+	struct variable_field *reference_manifest_data);
 
 /** @brief Decode the record descriptor entries in the firmware update package
  *         and the Descriptors in the QueryDeviceIDentifiers command

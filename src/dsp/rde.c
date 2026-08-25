@@ -2,6 +2,7 @@
 
 #include "base.h"
 #include "msgbuf.h"
+#include "utils.h"
 
 #include <endian.h>
 #include <stdio.h>
@@ -14,7 +15,7 @@ int encode_negotiate_redfish_parameters_req(uint8_t instance_id,
 					    bitfield16_t *mc_feature_support,
 					    struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || mc_concurrency_support == 0 ||
@@ -50,7 +51,7 @@ int decode_negotiate_redfish_parameters_req(const struct pldm_msg *msg,
 					    uint8_t *mc_concurrency_support,
 					    bitfield16_t *mc_feature_support)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || mc_concurrency_support == NULL ||
@@ -88,7 +89,7 @@ int encode_negotiate_redfish_parameters_resp(
 	enum pldm_rde_varstring_format name_format, size_t payload_length,
 	struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || device_capabilities_flags == NULL ||
@@ -151,7 +152,8 @@ int decode_negotiate_redfish_parameters_resp(
 	uint32_t *device_configuration_signature,
 	struct pldm_rde_varstring *provider_name)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *span;
 	int rc;
 
 	if (msg == NULL || completion_code == NULL ||
@@ -182,8 +184,9 @@ int decode_negotiate_redfish_parameters_resp(
 	pldm_msgbuf_extract_p(buf, &provider_name->string_format);
 	pldm_msgbuf_extract_p(buf, &provider_name->string_length_bytes);
 
-	pldm_msgbuf_span_required(buf, provider_name->string_length_bytes,
-				  (void **)&provider_name->string_data);
+	span = NULL;
+	pldm_msgbuf_span_required(buf, provider_name->string_length_bytes, &span);
+	provider_name->string_data = (char *)span;
 
 	return pldm_msgbuf_complete(buf);
 }
@@ -193,7 +196,7 @@ int encode_negotiate_medium_parameters_req(uint8_t instance_id,
 					   uint32_t mc_max_transfer_size,
 					   struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -227,7 +230,7 @@ LIBPLDM_ABI_STABLE
 int decode_negotiate_medium_parameters_req(const struct pldm_msg *msg,
 					   uint32_t *mc_max_transfer_size)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || mc_max_transfer_size == NULL) {
@@ -258,7 +261,7 @@ int encode_negotiate_medium_parameters_resp(uint8_t instance_id,
 					    size_t payload_length,
 					    struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (NULL == msg) {
@@ -300,7 +303,7 @@ int decode_negotiate_medium_parameters_resp(const struct pldm_msg *msg,
 					    uint8_t *completion_code,
 					    uint32_t *device_max_transfer_size)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL ||
@@ -332,7 +335,7 @@ int encode_get_schema_dictionary_req(uint8_t instance_id, uint32_t resource_id,
 				     size_t payload_length,
 				     struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -368,7 +371,7 @@ int decode_get_schema_dictionary_req(const struct pldm_msg *msg,
 				     uint32_t *resource_id,
 				     uint8_t *requested_schema_class)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || resource_id == NULL ||
@@ -401,7 +404,7 @@ int encode_get_schema_dictionary_resp(
 	uint8_t instance_id, uint8_t completion_code, uint8_t dictionary_format,
 	uint32_t transfer_handle, size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (NULL == msg) {
@@ -442,7 +445,7 @@ int decode_get_schema_dictionary_resp(const struct pldm_msg *msg,
 				      uint8_t *dictionary_format,
 				      uint32_t *transfer_handle)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if ((msg == NULL) || (dictionary_format == NULL) ||
@@ -476,7 +479,7 @@ int encode_get_schema_uri_req(uint8_t instance_id, uint32_t resource_id,
 			      uint8_t oem_extension_number,
 			      struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -513,7 +516,7 @@ int decode_get_schema_uri_req(const struct pldm_msg *msg, uint32_t *resource_id,
 			      uint8_t *req_schema_class,
 			      uint8_t *oem_extension_number)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || resource_id == NULL || req_schema_class == NULL ||
@@ -542,7 +545,7 @@ int encode_get_schema_uri_resp(uint8_t instance_id, uint8_t completion_code,
 			       const struct pldm_rde_varstring *schema_uri,
 			       struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (!msg || !schema_uri || string_fragment_count == 0) {
@@ -615,7 +618,7 @@ int decode_get_schema_uri_resp(const struct pldm_msg *msg,
 			       struct pldm_rde_varstring *schema_uri_array,
 			       size_t payload_length, size_t *actual_uri_len)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (!msg || !completion_code || !string_fragment_count) {
@@ -668,7 +671,7 @@ int decode_get_schema_uri_resp(const struct pldm_msg *msg,
 		schema_uri_array[i].string_format = format;
 		schema_uri_array[i].string_length_bytes = length;
 
-		void *span_ptr = NULL;
+		const void *span_ptr = NULL;
 
 		rc = pldm_msgbuf_span_required(buf, length - 1, &span_ptr);
 		if (rc != PLDM_SUCCESS) {
@@ -693,7 +696,7 @@ LIBPLDM_ABI_STABLE
 int encode_get_resource_etag_req(uint8_t instance_id, uint32_t resource_id,
 				 struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -726,7 +729,7 @@ LIBPLDM_ABI_STABLE
 int decode_get_resource_etag_req(const struct pldm_msg *msg,
 				 uint32_t *resource_id)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || resource_id == NULL) {
@@ -750,7 +753,7 @@ int encode_get_resource_etag_resp(uint8_t instance_id, uint8_t completion_code,
 				  const char *etag_string_data,
 				  struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || etag_string_data == NULL) {
@@ -806,7 +809,8 @@ int decode_get_resource_etag_resp(const struct pldm_msg *msg,
 				  uint8_t *completion_code,
 				  struct pldm_rde_varstring *etag)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *span;
 	int rc;
 
 	if (msg == NULL || completion_code == NULL || etag == NULL) {
@@ -829,8 +833,9 @@ int decode_get_resource_etag_resp(const struct pldm_msg *msg,
 	pldm_msgbuf_extract_p(buf, &etag->string_format);
 	pldm_msgbuf_extract_p(buf, &etag->string_length_bytes);
 
-	pldm_msgbuf_span_required(buf, etag->string_length_bytes,
-				  (void **)&etag->string_data);
+	span = NULL;
+	pldm_msgbuf_span_required(buf, etag->string_length_bytes, &span);
+	etag->string_data = (char *)span;
 
 	return pldm_msgbuf_complete(buf);
 }
@@ -844,7 +849,7 @@ int encode_rde_multipart_send_req(uint8_t instance_id,
 				  uint32_t data_integrity_checksum,
 				  struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 	bool add_checksum = false;
 
@@ -915,7 +920,7 @@ int decode_rde_multipart_send_req(const struct pldm_msg *msg,
 				  uint32_t *data_length_bytes, uint8_t *data,
 				  uint32_t *data_integrity_checksum)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 	bool add_checksum = false;
 
@@ -962,7 +967,7 @@ int encode_rde_multipart_send_resp(uint8_t instance_id, uint8_t completion_code,
 				   uint8_t transfer_operation,
 				   size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (NULL == msg) {
@@ -1003,7 +1008,7 @@ int decode_rde_multipart_send_resp(const struct pldm_msg *msg,
 				   uint8_t *completion_code,
 				   uint8_t *transfer_operation)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL ||
@@ -1035,7 +1040,7 @@ int encode_rde_multipart_receive_req(uint8_t instance_id,
 				     uint8_t transfer_operation,
 				     struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || transfer_operation > PLDM_RDE_XFER_ABORT) {
@@ -1073,7 +1078,7 @@ int decode_rde_multipart_receive_req(const struct pldm_msg *msg,
 				     rde_op_id *operation_id,
 				     uint8_t *transfer_operation)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if ((msg == NULL) || (data_transfer_handle == NULL) ||
@@ -1109,7 +1114,7 @@ int encode_rde_multipart_receive_resp(
 	const uint8_t *data, uint32_t data_integrity_checksum,
 	struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 	bool add_checksum = false;
 
@@ -1173,7 +1178,7 @@ int decode_rde_multipart_receive_resp(
 	uint32_t *data_transfer_handle, uint32_t *data_length_bytes,
 	uint8_t *data, uint32_t *data_integrity_checksum)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 	bool add_checksum = false;
 
@@ -1232,7 +1237,7 @@ int encode_rde_operation_init_req(
 	uint32_t request_payload_length, const uint8_t *operation_locator,
 	const uint8_t *request_payload, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if ((msg == NULL) || (operation_flags == NULL)) {
@@ -1308,7 +1313,7 @@ int decode_rde_operation_init_req(
 	uint8_t *operation_locator_length, uint32_t *request_payload_length,
 	uint8_t *operation_locator, uint8_t *request_payload)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if ((msg == NULL) || (resource_id == NULL) || (operation_id == NULL) ||
@@ -1370,7 +1375,7 @@ int encode_rde_operation_init_resp(
 	bitfield8_t *permission_flags, uint32_t response_payload_length,
 	const char *etag, const uint8_t *response_payload, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if ((msg == NULL) || (operation_execution_flags == NULL) ||
@@ -1450,7 +1455,8 @@ int decode_rde_operation_init_resp(
 	uint32_t *response_payload_length, struct pldm_rde_varstring *etag,
 	uint8_t *response_payload)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *span;
 	int rc;
 
 	if (msg == NULL || completion_code == NULL ||
@@ -1484,8 +1490,9 @@ int decode_rde_operation_init_resp(
 	pldm_msgbuf_extract_p(buf, response_payload_length);
 	pldm_msgbuf_extract_p(buf, &etag->string_format);
 	pldm_msgbuf_extract_p(buf, &etag->string_length_bytes);
-	pldm_msgbuf_span_required(buf, etag->string_length_bytes,
-				  (void **)&etag->string_data);
+	span = NULL;
+	pldm_msgbuf_span_required(buf, etag->string_length_bytes, &span);
+	etag->string_data = (char *)span;
 
 	if (*response_payload_length > 0) {
 		rc = pldm_msgbuf_extract_array(buf, *response_payload_length,
@@ -1504,7 +1511,7 @@ int encode_rde_operation_complete_req(uint8_t instance_id, uint32_t resource_id,
 				      rde_op_id operation_id,
 				      struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -1541,7 +1548,7 @@ int decode_rde_operation_complete_req(const struct pldm_msg *msg,
 				      uint32_t *resource_id,
 				      rde_op_id *operation_id)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || resource_id == NULL || operation_id == NULL) {
@@ -1569,7 +1576,7 @@ int encode_rde_operation_complete_resp(uint8_t instance_id,
 				       uint8_t completion_code,
 				       struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -1610,7 +1617,7 @@ int decode_rde_operation_complete_resp(const struct pldm_msg *msg,
 				       uint32_t payload_length,
 				       uint8_t *completion_code)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL) {
@@ -1643,7 +1650,7 @@ int encode_rde_operation_status_req(uint8_t instance_id, uint32_t resource_id,
 				    rde_op_id operation_id,
 				    struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -1680,7 +1687,7 @@ int decode_rde_operation_status_req(const struct pldm_msg *msg,
 				    uint32_t *resource_id,
 				    rde_op_id *operation_id)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || resource_id == NULL || operation_id == NULL) {
@@ -1711,7 +1718,7 @@ int encode_rde_operation_status_resp(
 	bitfield8_t *permission_flags, uint32_t response_payload_length,
 	const char *etag, const uint8_t *response_payload, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if ((msg == NULL) || (operation_execution_flags == NULL) ||
@@ -1791,7 +1798,8 @@ int decode_rde_operation_status_resp(
 	uint32_t *response_payload_length, struct pldm_rde_varstring *etag,
 	uint8_t *response_payload)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *span;
 	int rc;
 
 	if (msg == NULL || completion_code == NULL ||
@@ -1825,8 +1833,9 @@ int decode_rde_operation_status_resp(
 	pldm_msgbuf_extract_p(buf, response_payload_length);
 	pldm_msgbuf_extract_p(buf, &etag->string_format);
 	pldm_msgbuf_extract_p(buf, &etag->string_length_bytes);
-	pldm_msgbuf_span_required(buf, etag->string_length_bytes,
-				  (void **)&etag->string_data);
+	span = NULL;
+	pldm_msgbuf_span_required(buf, etag->string_length_bytes, &span);
+	etag->string_data = (char *)span;
 
 	if (*response_payload_length > 0) {
 		rc = pldm_msgbuf_extract_array(buf, *response_payload_length,
@@ -1862,7 +1871,7 @@ int encode_rde_operation_enumerate_resp(
 	uint8_t instance_id, uint8_t completion_code, uint16_t operation_count,
 	const struct pldm_rde_op_entry *operations, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 	if (msg == NULL || (operation_count > 0 && operations == NULL)) {
 		return PLDM_ERROR_INVALID_DATA;
@@ -1920,7 +1929,7 @@ int decode_rde_operation_enumerate_resp(const struct pldm_msg *msg,
 					uint16_t *operation_count,
 					struct pldm_rde_op_entry *operations)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL || operation_count == NULL) {
@@ -1956,7 +1965,7 @@ int encode_get_oem_count_req(uint8_t instance_id, uint32_t resource_id,
 			     uint8_t schema_class, size_t payload_length,
 			     struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -1990,7 +1999,7 @@ LIBPLDM_ABI_STABLE
 int decode_get_oem_count_req(const struct pldm_msg *msg, size_t payload_length,
 			     uint32_t *resource_id, uint8_t *schema_class)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || resource_id == NULL) {
@@ -2020,7 +2029,7 @@ int encode_get_oem_count_resp(uint8_t instance_id, uint8_t completion_code,
 			      uint8_t oem_count, size_t payload_length,
 			      struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (NULL == msg) {
@@ -2059,7 +2068,7 @@ LIBPLDM_ABI_STABLE
 int decode_get_oem_count_resp(const struct pldm_msg *msg, size_t payload_length,
 			      uint8_t *completion_code, uint8_t *oem_count)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL || oem_count == NULL) {
@@ -2104,7 +2113,7 @@ int encode_get_registry_count_resp(uint8_t instance_id, uint8_t completion_code,
 				   uint8_t registry_count,
 				   size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (NULL == msg) {
@@ -2145,7 +2154,7 @@ int decode_get_registry_count_resp(const struct pldm_msg *msg,
 				   uint8_t *completion_code,
 				   uint8_t *registry_count)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL || registry_count == NULL) {
@@ -2173,7 +2182,7 @@ LIBPLDM_ABI_STABLE
 int encode_get_registry_details_req(uint8_t instance_id, uint8_t registry_index,
 				    size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -2207,7 +2216,7 @@ int decode_get_registry_details_req(const struct pldm_msg *msg,
 				    size_t payload_length,
 				    uint8_t *registry_index)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || registry_index == NULL) {
@@ -2238,7 +2247,7 @@ int encode_get_registry_details_resp(
 	uint16_t registry_language, uint8_t version_count, ver32_t *vesion,
 	size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || registry_prefix == NULL || registry_uri == NULL ||
@@ -2322,7 +2331,8 @@ int decode_get_registry_details_resp(const struct pldm_msg *msg,
 				     uint16_t *registry_language,
 				     uint8_t *version_count, ver32_t *vesion)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
+	const void *span;
 	int rc;
 
 	if (msg == NULL || completion_code == NULL || registry_prefix == NULL ||
@@ -2347,14 +2357,16 @@ int decode_get_registry_details_resp(const struct pldm_msg *msg,
 	pldm_msgbuf_extract_p(buf, &registry_prefix->string_format);
 	pldm_msgbuf_extract_p(buf, &registry_prefix->string_length_bytes);
 
-	pldm_msgbuf_span_required(buf, registry_prefix->string_length_bytes,
-				  (void **)&registry_prefix->string_data);
+	span = NULL;
+	pldm_msgbuf_span_required(buf, registry_prefix->string_length_bytes, &span);
+	registry_prefix->string_data = (char *)span;
 
 	pldm_msgbuf_extract_p(buf, &registry_uri->string_format);
 	pldm_msgbuf_extract_p(buf, &registry_uri->string_length_bytes);
 
-	pldm_msgbuf_span_required(buf, registry_uri->string_length_bytes,
-				  (void **)&registry_uri->string_data);
+	span = NULL;
+	pldm_msgbuf_span_required(buf, registry_uri->string_length_bytes, &span);
+	registry_uri->string_data = (char *)span;
 
 	pldm_msgbuf_extract_p(buf, registry_language);
 	pldm_msgbuf_extract_p(buf, version_count);
@@ -2376,7 +2388,7 @@ int encode_select_registry_version_req(uint8_t instance_id,
 				       size_t payload_length,
 				       struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -2415,7 +2427,7 @@ int decode_select_registry_version_req(const struct pldm_msg *msg,
 				       uint8_t *registry_index,
 				       ver32_t *registry_version)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || registry_index == NULL || registry_version == NULL) {
@@ -2447,7 +2459,7 @@ int encode_select_registry_version_resp(uint8_t instance_id,
 					uint8_t completion_code,
 					struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -2489,7 +2501,7 @@ int decode_select_registry_version_resp(const struct pldm_msg *msg,
 					uint32_t payload_length,
 					uint8_t *completion_code)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL) {
@@ -2541,7 +2553,7 @@ LIBPLDM_ABI_STABLE
 int encode_get_message_registry_req(uint8_t instance_id, uint8_t registry_index,
 				    size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -2575,7 +2587,7 @@ int decode_get_message_registry_req(const struct pldm_msg *msg,
 				    size_t payload_length,
 				    uint8_t *registry_index)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || registry_index == NULL) {
@@ -2603,7 +2615,7 @@ int encode_get_message_registry_resp(
 	uint8_t instance_id, uint8_t completion_code, uint8_t schema_format,
 	uint32_t transfer_handle, size_t payload_length, struct pldm_msg *msg)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RW_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL) {
@@ -2650,7 +2662,7 @@ int decode_get_message_registry_resp(const struct pldm_msg *msg,
 				     uint8_t *schema_format,
 				     uint32_t *transfer_handle)
 {
-	PLDM_MSGBUF_DEFINE_P(buf);
+	PLDM_MSGBUF_RO_DEFINE_P(buf);
 	int rc;
 
 	if (msg == NULL || completion_code == NULL || schema_format == NULL ||
